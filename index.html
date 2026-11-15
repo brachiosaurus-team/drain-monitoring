@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>빗물받이 모니터링</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap">
+<style>
+  /* 행안부 「디지털 정부서비스 UI/UX 가이드라인」(2025.08) 표준형 스타일 기준.
+     구조: 건너뛰기 링크 → 헤더(서비스명 + 유틸리티 + 메인 메뉴) → 긴급 공지 → 본문(모니터링/상황실/이력) → 푸터
+     색상: KRDS 프리미티브 토큰. 기본 모드와 선명한 화면 모드(data-mode="hc") 두 가지. 상황실은 처음 열 때 선명한 화면 모드.
+     서체: 가이드라인 표준은 Pretendard GOV이나, 이 페이지는 Google Fonts만 쓸 수 있어 확장형 권장 서체인 Noto Sans KR 사용(p.103).
+     크기: rem 단위, 본문 17px(p.107), 굵기 400/700(p.104), 줄 간격 150% 이상(p.105).
+     형태: 배지 4px, 버튼·입력 6px, 카드 10px(p.130). 간격: 8의 배수(p.152). */
+  :root{
+    --font:"Pretendard GOV","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+
+    --bg:#f4f5f6; --surface:#ffffff; --surface-2:#f4f5f6;
+    --text:#1e2124; --text-2:#464c53; --text-3:#6d7882;
+    --line:#e6e8ea; --border:#cdd1d5; --border-input:#6d7882;
+    --primary:#256ef4; --primary-hover:#0b50d0; --primary-soft:#ecf2fe; --link:#0b50d0; --focus:#256ef4;
+    --btn-text:#ffffff;
+
+    --ok-text:#464c53; --ok-bg:#f4f5f6; --ok-border:#cdd1d5; --ok-icon:#6d7882;
+    --off-text:#33363d; --off-bg:#e6e8ea; --off-icon:#58616a;
+    --warn-text:#8a5c00; --warn-bg:#fff3db; --warn-border:#ffe0a3; --warn-icon:#ffb114;
+    --warn-badge-bg:#ffb114; --warn-badge-text:#2e1f00;
+    --crit-text:#bd2c0f; --crit-bg:#fdefec; --crit-border:#fcdfd9; --crit-icon:#de3412;
+    --info-text:#096ab3; --info-bg:#e7f4fe; --info-border:#d3ebfd; --info-icon:#0b78cb;
+
+    --water:#346fb2; --track:#e6e8ea; --map:#f4f5f6; --mapline:#e6e8ea; --rain:#e7f4fe;
+    --shadow:0 1px 2px rgba(0,0,0,.06);
+    color-scheme:light;
+  }
+  :root[data-mode="hc"]{
+    --bg:#000000; --surface:#131416; --surface-2:#1e2124;
+    --text:#f4f5f6; --text-2:#cdd1d5; --text-3:#b1b8be;
+    --line:#33363d; --border:#58616a; --border-input:#8a949e;
+    --primary:#86aff9; --primary-hover:#b1cefb; --primary-soft:#03163a; --link:#86aff9; --focus:#86aff9;
+    --btn-text:#000000;
+
+    --ok-text:#cdd1d5; --ok-bg:#1e2124; --ok-border:#33363d; --ok-icon:#8a949e;
+    --off-text:#f4f5f6; --off-bg:#33363d; --off-icon:#b1b8be;
+    --warn-text:#ffc95c; --warn-bg:#241800; --warn-border:#2e1f00; --warn-icon:#ffc95c;
+    --warn-badge-bg:#ffc95c; --warn-badge-text:#000000;
+    --crit-text:#f7afa1; --crit-bg:#260903; --crit-border:#390d05; --crit-icon:#f7afa1;
+    --info-text:#9ed2fa; --info-bg:#021a2c; --info-border:#03253f; --info-icon:#9ed2fa;
+
+    --water:#3d9fb8; --track:#33363d; --map:#1e2124; --mapline:#33363d; --rain:#03253f;
+    --shadow:none;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html{font-size:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:400 1.0625rem/1.6 var(--font)}
+  h1,h2,h3,p{margin:0}
+  h1{font-size:2rem;font-weight:700;line-height:1.5;text-wrap:balance}
+  h2{font-size:1.5rem;font-weight:700;line-height:1.5}
+  h3{font-size:1.1875rem;font-weight:700;line-height:1.5}
+  a{color:var(--link)}
+  button,select,input{font:inherit;color:inherit}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  [data-mode="hc"] a{text-decoration-thickness:2px}
+  .num{font-variant-numeric:tabular-nums}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  .container{
+    max-width:75rem;margin:0 auto;
+    padding-left:max(16px, env(safe-area-inset-left,0px));
+    padding-right:max(16px, env(safe-area-inset-right,0px));
+  }
+  @media (min-width:768px){
+    .container{padding-left:max(24px, env(safe-area-inset-left,0px));padding-right:max(24px, env(safe-area-inset-right,0px))}
+  }
+
+  /* 건너뛰기 링크 (p.254) */
+  .skip{position:absolute;left:16px;top:-100px;z-index:100;background:var(--surface);color:var(--link);padding:8px 16px;border:2px solid var(--focus);border-radius:6px;font-weight:700}
+  .skip:focus{top:calc(8px + env(safe-area-inset-top,0px))}
+
+  /* 헤더 (p.233) */
+  .site-header{background:var(--surface);border-bottom:1px solid var(--border)}
+  .header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:16px}
+  .brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text)}
+  .brand svg{width:32px;height:32px;flex:none}
+  .brand-name{font-size:1.1875rem;font-weight:700}
+  .demo-tag{font-size:.8125rem;color:var(--text-2);border:1px solid var(--border);border-radius:4px;padding:0 8px;line-height:1.6}
+  .utility{display:flex;align-items:center;gap:16px;list-style:none;margin:0;padding:0;font-size:.9375rem}
+  .utility li{display:flex;align-items:center;gap:8px}
+  .utility .divider{width:1px;height:16px;background:var(--border)}
+  .utility select{padding:4px 8px;border:1px solid var(--border-input);border-radius:6px;background:var(--surface)}
+  .mode-btn{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border:1px solid var(--border-input);border-radius:6px;background:var(--surface);cursor:pointer}
+  .mode-btn[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--primary);font-weight:700}
+  .mode-btn svg{width:16px;height:16px}
+
+  .main-menu ul{display:flex;gap:32px;list-style:none;margin:0;padding:0}
+  .main-menu a{display:block;padding:12px 0;color:var(--text-2);text-decoration:none;font-weight:700;border-bottom:3px solid transparent}
+  .main-menu a:hover{color:var(--text)}
+  .main-menu a[aria-current="page"]{color:var(--link);border-bottom-color:var(--link)}
+
+  /* 긴급 공지 (p.360–367): 본문 첫 요소, 전체 너비, 하나만, 숨기기 버튼 없음, 링크 1개 */
+  .critical{background:var(--crit-bg);border-bottom:1px solid var(--crit-border)}
+  .critical .container{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px}
+  .ca-label{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--crit-text);white-space:nowrap}
+  .ca-label svg{width:20px;height:20px}
+  .ca-text{flex:1;min-width:0;font-weight:700}
+  .ca-link{font-weight:700;white-space:nowrap}
+
+  main{display:block;outline:none}
+  .view{padding-block:32px 64px;display:flex;flex-direction:column;gap:24px}
+  .page-head{display:flex;flex-direction:column;gap:4px}
+  .meta{color:var(--text-2);font-size:.9375rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .live{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+
+  .infobox{display:flex;gap:8px;align-items:flex-start;padding:16px 24px;border-radius:10px;background:var(--info-bg);border:1px solid var(--info-border);color:var(--text);font-size:.9375rem}
+  .infobox svg{flex:none;width:20px;height:20px;margin-top:3px}
+  .infobox b{font-weight:700}
+  .ts-err{display:block;margin-top:4px;color:var(--crit-text);font-weight:700}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0;box-shadow:var(--shadow)}
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .card-head .sub{color:var(--text-2);font-size:.9375rem}
+
+  /* 요약 숫자 */
+  .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 24px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--shadow)}
+  .tile .l{display:flex;align-items:center;gap:8px;color:var(--text-2);font-weight:700}
+  .tile .v{font-size:2.5rem;font-weight:700;line-height:1.3}
+  .tile .s{font-size:.9375rem;color:var(--text-2)}
+  .tile.warn.on{background:var(--warn-bg)}
+  .tile.warn.on .v{color:var(--warn-text)}
+  .tile.crit.on{background:var(--crit-bg);border-color:var(--crit-icon)}
+  .tile.crit.on .v{color:var(--crit-text)}
+
+  /* 상태 배지 (p.399): 텍스트 레이블 + 아이콘, 4px, 클릭 불가 */
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;border:1px solid;font-size:.9375rem;font-weight:700;white-space:nowrap;line-height:1.5}
+  .badge svg{width:14px;height:14px;flex:none}
+  .badge.good{background:var(--ok-bg);border-color:var(--ok-border);color:var(--ok-text)}
+  .badge.warn{background:var(--warn-badge-bg);border-color:transparent;color:var(--warn-badge-text)}
+  .badge.warn svg polygon{fill:var(--warn-badge-text)}
+  .badge.crit{background:var(--crit-bg);border-color:var(--crit-border);color:var(--crit-text)}
+  .badge.off{background:var(--off-bg);border-color:transparent;color:var(--off-text)}
+  .badge.info{background:var(--info-bg);border-color:var(--info-border);color:var(--info-text)}
+
+  /* 버튼 (p.510): 화면당 강조 버튼 1개, 동사형 레이블 */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:6px;border:1px solid var(--border-input);background:var(--surface);color:var(--text);font-weight:700;font-size:.9375rem;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:var(--surface-2)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--btn-text)}
+  .btn.primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+  .btn.secondary{border-color:var(--primary);color:var(--link)}
+  .btn.sm{min-height:32px;padding:0 12px}
+  .btn[disabled]{cursor:progress;opacity:1;background:var(--surface-2);border-color:var(--border);color:var(--text-2)}
+  .link-btn{border:none;background:none;padding:0;color:var(--link);font-weight:700;text-decoration:underline;cursor:pointer;font-variant-numeric:tabular-nums}
+
+  .body-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+  .right-col{display:flex;flex-direction:column;gap:24px;min-width:0}
+
+  /* 구조화 목록 (p.353) */
+  .sl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+  .sl-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:8px 16px;padding:16px 0;border-top:1px solid var(--line)}
+  .sl-item:first-child{border-top:none;padding-top:0}
+  .sl-item.sel .sl-title{color:var(--link)}
+  .sl-item.sel{box-shadow:inset 4px 0 0 var(--link);padding-left:12px}
+  .sl-title{font-weight:700}
+  .sl-desc{font-size:.9375rem;color:var(--text-2)}
+  .sl-dur{font-size:.9375rem;color:var(--text-2);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .empty{padding:24px 0;text-align:center;color:var(--text-2)}
+
+  .map{background:var(--map);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+  .map svg{display:block;width:100%;height:auto}
+  .map [data-id]{cursor:pointer}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.9375rem;color:var(--text-2);list-style:none;margin:0;padding:0}
+  .legend li{display:flex;align-items:center;gap:4px}
+  .ring{animation:ring 1.6s ease-out infinite;transform-origin:center;transform-box:fill-box}
+  @keyframes ring{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
+
+  /* 장치 상세 (p.813) */
+  .detail-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+  .detail-src{font-size:.9375rem;color:var(--text-2)}
+  .meter{display:flex;flex-direction:column;gap:4px}
+  .meter-label{display:flex;justify-content:space-between;gap:8px;font-size:.9375rem;color:var(--text-2)}
+  .meter-label b{color:var(--text);font-variant-numeric:tabular-nums}
+  .track{height:12px;border-radius:2px;background:var(--track);position:relative;overflow:hidden}
+  .fill{height:100%;background:var(--water);position:relative;z-index:1;transition:width .5s ease}
+  .fill.box{background:var(--ok-icon)}
+  .fill.warn{background:var(--warn-icon)}
+  .fill.crit{background:var(--crit-icon)}
+  .tick{position:absolute;top:0;bottom:0;width:2px;background:var(--text);opacity:.5;z-index:2}
+  .gap-band{position:absolute;top:0;bottom:0;z-index:0;background:repeating-linear-gradient(45deg,var(--border) 0 3px,transparent 3px 7px)}
+  .meter-sub{font-size:.8125rem;color:var(--text-2)}
+  .boxes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .full-flag{font-size:.8125rem;font-weight:700;color:var(--crit-text)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px}
+  .log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.9375rem;color:var(--text-2)}
+  .log time{font-variant-numeric:tabular-nums;margin-right:8px}
+  .note{font-size:.8125rem;color:var(--text-2)}
+
+  /* 필터링·정렬 (p.857) */
+  .filters{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .fgroup{display:flex;flex-direction:column;gap:8px;border:none;margin:0;padding:0;min-width:0}
+  .fgroup legend,.fgroup label{font-size:.9375rem;font-weight:700;color:var(--text-2);padding:0}
+  .seg{display:flex;flex-wrap:wrap;gap:8px}
+  .seg button{min-height:40px;padding:0 16px;border-radius:6px;border:1px solid var(--border-input);background:var(--surface);cursor:pointer;font-size:.9375rem}
+  .seg button[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--btn-text);font-weight:700}
+  .fgroup select,.fgroup input{min-height:40px;padding:0 12px;border:1px solid var(--border-input);border-radius:6px;background:var(--surface);font-size:.9375rem}
+  .fgroup input{width:13rem;max-width:100%}
+  .applied{font-size:.9375rem;color:var(--text-2)}
+  .applied b{color:var(--text)}
+
+  /* 표 (p.459): 행은 대화형 아님, 숫자 오른쪽, 빈 값 "-", caption */
+  .table-wrap{overflow-x:auto;border-top:2px solid var(--text);max-height:32rem;overflow-y:auto}
+  table{border-collapse:collapse;width:100%;min-width:52rem;font-size:.9375rem}
+  caption{text-align:left;padding:0 0 8px;color:var(--text-2);font-size:.9375rem}
+  th,td{padding:12px 16px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  thead th{position:sticky;top:0;background:var(--surface-2);font-weight:700;color:var(--text);z-index:1}
+  td.r,th.r{text-align:right}
+  td.r{font-variant-numeric:tabular-nums}
+  .sort{display:inline-flex;align-items:center;gap:4px;border:none;background:none;padding:0;font-weight:700;cursor:pointer;color:var(--text)}
+  .sort svg{width:12px;height:12px;opacity:.4}
+  th[aria-sort] .sort svg{opacity:1;color:var(--link)}
+  .muted{color:var(--text-2)}
+  .src-note{font-size:.8125rem;color:var(--text-2);margin-left:4px}
+
+  .tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  details summary{cursor:pointer;font-weight:700}
+  .notify{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .notify div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:16px;font-size:.9375rem;color:var(--text-2)}
+  .notify b{display:block;color:var(--text);margin-bottom:4px}
+
+  /* 이력 */
+  .chart svg{display:block;width:100%;height:auto}
+  .hist-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+  .hist-grid table{min-width:30rem}
+  .hot{font-size:.8125rem;font-weight:700;color:var(--crit-text);margin-left:8px}
+  .uses{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
+  .uses b{display:block}
+  .uses span{font-size:.9375rem;color:var(--text-2)}
+
+  /* 푸터 */
+  .site-footer{background:var(--surface);border-top:1px solid var(--border);padding-block:32px;font-size:.9375rem;color:var(--text-2)}
+  .site-footer .container{display:flex;flex-direction:column;gap:8px}
+  .site-footer strong{color:var(--text);font-size:1.0625rem}
+  [data-mode="hc"] .site-footer a{text-decoration:underline}
+
+  /* 상황실 (선명한 화면 모드에서 3~5m 거리 시청 기준) */
+  .ops{max-width:none;padding-block:24px 40px;padding-left:max(24px, env(safe-area-inset-left,0px));padding-right:max(24px, env(safe-area-inset-right,0px));display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:24px;min-height:80vh}
+  .o-top{display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+  .o-title h1{font-size:clamp(1.5rem,2.2vw,2.5rem)}
+  .o-title p{color:var(--text-2);font-size:clamp(.9375rem,1vw,1.1875rem)}
+  .o-counts{list-style:none;margin:0;padding:0;display:flex;gap:16px;flex:1;justify-content:center;flex-wrap:wrap}
+  .o-count{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 24px;display:flex;flex-direction:column;min-width:clamp(7rem,8vw,11rem)}
+  .o-count .l{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--text-2);font-size:clamp(.9375rem,1.1vw,1.25rem)}
+  .o-count .v{font-size:clamp(2.5rem,4vw,4.5rem);font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+  .o-count.warn.on{background:var(--warn-bg)}
+  .o-count.warn.on .v{color:var(--warn-text)}
+  .o-count.crit.on{background:var(--crit-bg);border-color:var(--crit-icon)}
+  .o-count.crit.on .v{color:var(--crit-text)}
+  .o-clock{font-size:clamp(1.75rem,2.6vw,3rem);font-weight:700;font-variant-numeric:tabular-nums}
+  .o-body{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:24px;min-height:0}
+  .o-map{background:var(--map);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .o-map svg{display:block;width:100%;height:100%}
+  .o-side{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .o-side h2,.o-events h2{font-size:clamp(1.1875rem,1.4vw,1.75rem)}
+  .o-list{list-style:none;margin:0;padding:0}
+  .o-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 16px;align-items:center;padding:16px 0;border-top:1px solid var(--line)}
+  .o-item:first-child{border-top:none}
+  .o-item .ic{grid-row:1/3}
+  .o-item .who{font-size:clamp(1.1875rem,1.5vw,1.875rem);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .o-item .why{grid-column:2;font-size:clamp(.9375rem,1.1vw,1.25rem);color:var(--text-2)}
+  .o-item .dur{grid-row:1/3;grid-column:3;text-align:right;font-size:clamp(1.1875rem,1.5vw,1.875rem);font-weight:700;font-variant-numeric:tabular-nums}
+  .o-item .dur small{display:block;font-size:clamp(.8125rem,.9vw,1rem);font-weight:400;color:var(--text-2)}
+  .o-item.crit .dur{color:var(--crit-text)}
+  .o-item.warn .dur{color:var(--warn-text)}
+  .o-more{color:var(--text-2);font-size:clamp(.9375rem,1vw,1.1875rem)}
+  .o-events{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 24px;display:flex;flex-direction:column;gap:16px}
+  .o-ev-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 24px}
+  .o-ev{display:flex;flex-direction:column;border-left:4px solid var(--border);padding-left:12px;min-width:0}
+  .o-ev.to-crit{border-left-color:var(--crit-icon)}
+  .o-ev.to-warn{border-left-color:var(--warn-icon)}
+  .o-ev.to-off{border-left-color:var(--off-icon)}
+  .o-ev.to-good{border-left-color:var(--ok-icon)}
+  .o-ev time{color:var(--text-2);font-variant-numeric:tabular-nums;font-size:clamp(.9375rem,1vw,1.1875rem)}
+  .o-ev b{font-size:clamp(1.0625rem,1.1vw,1.3125rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .o-ev span{color:var(--text-2);font-size:clamp(.9375rem,1vw,1.1875rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  @media (prefers-reduced-motion: reduce){ .ring{animation:none} .fill{transition:none} }
+  @media (max-width:1023px){
+    .body-grid,.tools,.hist-grid,.o-body{grid-template-columns:minmax(0,1fr)}
+    .o-ev-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:767px){
+    .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .tile .v{font-size:2rem}
+    h1{font-size:1.5rem}
+    h2{font-size:1.375rem}
+    .main-menu ul{gap:24px}
+    .sl-item{grid-template-columns:auto minmax(0,1fr)}
+    .sl-dur{grid-column:2;text-align:left}
+    .sl-item .btn{grid-column:1/-1;justify-self:start}
+    .boxes,.notify{grid-template-columns:1fr}
+    .o-ev-list{grid-template-columns:minmax(0,1fr)}
+    .card{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main" id="skipLink">본문 바로가기</a>
+
+<header class="site-header">
+  <div class="container header-top">
+    <a class="brand" href="#pc" id="brandLink">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="6" fill="var(--primary)"/><path d="M9 11h14M9 16h14M9 21h14" stroke="var(--btn-text)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span class="brand-name">빗물받이 모니터링</span>
+      <span class="demo-tag">개념증명 데모</span>
+    </a>
+    <ul class="utility" aria-label="화면 설정">
+      <li>
+        <label for="fontSize">화면 크기</label>
+        <select id="fontSize">
+          <option value="90">작게</option>
+          <option value="100" selected>보통</option>
+          <option value="110">크게</option>
+          <option value="120">더 크게</option>
+          <option value="130">가장 크게</option>
+        </select>
+      </li>
+      <li class="divider" aria-hidden="true"></li>
+      <li>
+        <button type="button" class="mode-btn" id="modeBtn" aria-pressed="false">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>
+          선명한 화면 모드
+        </button>
+      </li>
+    </ul>
+  </div>
+  <nav class="main-menu" aria-label="주 메뉴">
+    <div class="container">
+      <ul>
+        <li><a href="#pc" id="navPc">모니터링</a></li>
+        <li><a href="#ops" id="navOps">상황실</a></li>
+        <li><a href="#history" id="navHist">이력</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+<main id="main" tabindex="-1">
+  <section class="critical" role="banner" aria-label="긴급 공지" id="critical">
+    <div class="container">
+      <span class="ca-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 19 18H1z" fill="var(--crit-icon)"/><path d="M10 8v4.5" stroke="var(--crit-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="15" r="1.1" fill="var(--crit-bg)"/></svg>긴급</span>
+      <p class="ca-text" id="caText" aria-live="polite">호우주의보 발효 중(예시)</p>
+      <a class="ca-link" href="#pc" id="caLink">조치 필요 목록 보기</a>
+    </div>
+  </section>
+
+  <!-- ===================== 모니터링 (담당자 PC) ===================== -->
+  <div class="container view" id="pcView">
+    <div class="page-head">
+      <h1>관악구 빗물받이 모니터링</h1>
+      <p class="meta"><span class="live" aria-hidden="true"></span>담당자 화면 · 마지막 갱신 <time id="clock" class="num">--:--:--</time></p>
+    </div>
+
+    <p class="infobox">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--info-icon)"/><path d="M10 9v5" stroke="var(--info-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="6" r="1.2" fill="var(--info-bg)"/></svg>
+      <span><b>GA-001(신림동)은 실제 장치</b>로, ThingSpeak에서 15초마다 최신 값을 받아옵니다. 1분 넘게 새 값이 없으면 "통신 끊김"으로 표시됩니다. 나머지 49대는 관악구 전체 설치를 가정한 가상 장치입니다.<span class="ts-err" id="tsErr"></span></span>
+    </p>
+
+    <ul class="tiles" aria-label="장치 상태 요약">
+      <li class="tile"><span class="l">전체 장치</span><span class="v num" id="tTotal">0</span><span class="s" id="tTotalS">관악구 21개 동</span></li>
+      <li class="tile"><span class="l"><span data-icon="good"></span>정상</span><span class="v num" id="tGood">0</span><span class="s" id="tGoodS">-</span></li>
+      <li class="tile warn" id="tileWarn"><span class="l"><span data-icon="warn"></span>주의</span><span class="v num" id="tWarn">0</span><span class="s">강우 감지 · 수납함 80% 이상</span></li>
+      <li class="tile crit" id="tileCrit"><span class="l"><span data-icon="crit"></span>위험</span><span class="v num" id="tCrit">0</span><span class="s">마지노선 수위 · 수납함 가득 참</span></li>
+    </ul>
+
+    <div class="body-grid">
+      <section class="card" aria-labelledby="hAtt" id="attention" tabindex="-1">
+        <div class="card-head"><h2 id="hAtt">조치 필요</h2><span class="sub" id="attMeta">위험 먼저, 오래된 순</span></div>
+        <ul class="sl" id="attList"></ul>
+      </section>
+      <div class="right-col">
+        <section class="card" aria-labelledby="hMap">
+          <div class="card-head"><h2 id="hMap">위치</h2><span class="sub">지도 연동 전 · 예시 배치</span></div>
+          <div class="map" id="map"></div>
+          <ul class="legend">
+            <li><span data-icon="good"></span>정상</li>
+            <li><span data-icon="warn"></span>주의</li>
+            <li><span data-icon="crit"></span>위험</li>
+            <li><span data-icon="off"></span>통신 끊김</li>
+            <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--link)" stroke-width="2"/></svg>선택한 장치</li>
+          </ul>
+        </section>
+        <section class="card" aria-labelledby="hDetail" id="detail" tabindex="-1"></section>
+      </div>
+    </div>
+
+    <section class="card" aria-labelledby="hAll">
+      <div class="card-head"><h2 id="hAll">전체 장치</h2><span class="sub" id="tableMeta"></span></div>
+      <div class="filters">
+        <fieldset class="fgroup">
+          <legend>상태</legend>
+          <div class="seg" id="fStatus">
+            <button type="button" data-f="all" aria-pressed="true">전체</button>
+            <button type="button" data-f="crit" aria-pressed="false">위험</button>
+            <button type="button" data-f="warn" aria-pressed="false">주의</button>
+            <button type="button" data-f="good" aria-pressed="false">정상</button>
+          </div>
+        </fieldset>
+        <div class="fgroup">
+          <label for="fDong">동</label>
+          <select id="fDong"><option value="">전체 동</option></select>
+        </div>
+        <div class="fgroup">
+          <label for="fSearch">검색</label>
+          <input id="fSearch" type="search" placeholder="장치번호 또는 동">
+        </div>
+        <button type="button" class="btn" id="fReset">조건 초기화</button>
+      </div>
+      <p class="applied" id="applied" aria-live="polite"></p>
+      <div class="table-wrap">
+        <table>
+          <caption>관악구 빗물받이 장치 상태 (장치번호를 누르면 상세 정보가 열립니다)</caption>
+          <thead><tr>
+            <th scope="col" data-col="id"><button type="button" class="sort" data-sort="id">장치<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 1.5 9 4.5M3 7.5 6 10.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></th>
+            <th scope="col" data-col="dong"><button type="button" class="sort" data-sort="dong">동<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 1.5 9 4.5M3 7.5 6 10.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></th>
+            <th scope="col" data-col="sev"><button type="button" class="sort" data-sort="sev">상태<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 1.5 9 4.5M3 7.5 6 10.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></th>
+            <th scope="col">사유</th>
+            <th scope="col" class="r">상태 지속</th>
+            <th scope="col" class="r">수위</th>
+            <th scope="col" class="r">수납함1</th>
+            <th scope="col" class="r">수납함2</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="tools">
+      <section class="card" aria-labelledby="hDemo">
+        <div class="card-head"><h2 id="hDemo">시연 조작</h2><span class="sub">발표용</span></div>
+        <div class="row">
+          <button type="button" class="btn" id="btnTrigger">가상 장치 GA-002 위험으로 바꾸기</button>
+          <button type="button" class="btn" id="btnReset">전체 정상으로 되돌리기</button>
+        </div>
+        <p class="note">시연 조작과 조치 기록은 이 화면에서만 적용되며 새로고침하면 처음 상태로 돌아갑니다.</p>
+      </section>
+      <section class="card">
+        <details>
+          <summary>위험 상태일 때 담당자에게 가는 알림 (예시)</summary>
+          <div class="notify">
+            <div><b>문자</b>[빗물받이] GA-001 신림동 — 마지노선 수위 도달, 입구 자동 차단. 현장 확인 바랍니다.</div>
+            <div><b>이메일</b>제목: [경보] GA-001 위험 상태 전환<br>신림동 GA-001이 마지노선 수위에 도달해 입구가 자동 차단되었습니다.</div>
+          </div>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== 이력 ===================== -->
+  <div class="container view" id="histView" hidden>
+    <div class="page-head">
+      <h1>이력 · 최근 30일</h1>
+      <p class="meta">기록과 분석</p>
+    </div>
+    <p class="infobox">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--info-icon)"/><path d="M10 9v5" stroke="var(--info-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="6" r="1.2" fill="var(--info-bg)"/></svg>
+      <span>지난 29일은 <b>예시 기록(시뮬레이션)</b>이고, 오늘 칸은 이 화면에서 실제로 일어난 변화입니다. 와이파이 연동 후에는 GA-001의 실측 기록이 쌓입니다.</span>
+    </p>
+    <ul class="tiles" id="hTiles" aria-label="30일 요약"></ul>
+
+    <section class="card" aria-labelledby="hChartH">
+      <div class="card-head"><h2 id="hChartH">일별 주의·위험 발생</h2><span class="sub">비 온 날에 몰리는지 보세요</span></div>
+      <div class="chart" id="hChart"></div>
+      <ul class="legend">
+        <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2" fill="var(--rain)" stroke="var(--border)"/></svg>강우일 (예시)</li>
+        <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="var(--warn-icon)"/></svg>주의</li>
+        <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="var(--crit-icon)"/></svg>위험</li>
+      </ul>
+    </section>
+
+    <div class="hist-grid">
+      <section class="card" aria-labelledby="hTopH">
+        <div class="card-head"><h2 id="hTopH">집중관리 후보</h2><span class="sub">30일간 위험이 잦은 순</span></div>
+        <div class="table-wrap">
+          <table>
+            <caption>위험 발생 횟수 상위 8개 장치</caption>
+            <thead><tr><th scope="col" class="r">순위</th><th scope="col">장치</th><th scope="col" class="r">위험</th><th scope="col" class="r">주의</th><th scope="col" class="r">청소</th><th scope="col" class="r">평균 A→B 상승</th></tr></thead>
+            <tbody id="hTop"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="hUseH">
+        <div class="card-head"><h2 id="hUseH">이 기록으로 할 수 있는 것</h2></div>
+        <ul class="uses">
+          <li><b>집중관리 지점 선정</b><span>위험이 반복되는 장치를 집중관리 대상으로 지정하고 순찰을 늘립니다.</span></li>
+          <li><b>청소 주기 조정</b><span>수납함이 차는 속도에 맞춰 장치마다 청소 주기를 다르게 잡습니다.</span></li>
+          <li><b>넘침 예측</b><span>A→B 상승 시간과 강우 기록을 모아 마지노선 도달 전에 경고하는 모델의 학습 데이터로 씁니다.</span></li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="hLogH" id="logSection" tabindex="-1">
+      <div class="card-head"><h2 id="hLogH">전체 기록</h2><span class="sub" id="hLogMeta"></span></div>
+      <div class="filters">
+        <fieldset class="fgroup">
+          <legend>종류</legend>
+          <div class="seg" id="hKind">
+            <button type="button" data-hk="all" aria-pressed="true">전체</button>
+            <button type="button" data-hk="crit" aria-pressed="false">위험</button>
+            <button type="button" data-hk="warn" aria-pressed="false">주의</button>
+            <button type="button" data-hk="clean" aria-pressed="false">청소</button>
+          </div>
+        </fieldset>
+        <div class="fgroup">
+          <label for="hDev">장치</label>
+          <select id="hDev"><option value="">전체 장치</option></select>
+        </div>
+        <button type="button" class="btn" id="hReset">조건 초기화</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>최근 30일 상태 변화와 조치 기록 (최신순)</caption>
+          <thead><tr><th scope="col">일시</th><th scope="col">장치</th><th scope="col">동</th><th scope="col">종류</th><th scope="col">내용</th><th scope="col" class="r">상승·대응 시간</th></tr></thead>
+          <tbody id="hLog"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== 상황실 ===================== -->
+  <div class="ops view" id="opsView" hidden>
+    <div class="o-top">
+      <div class="o-title">
+        <h1>빗물받이 상황판</h1>
+        <p>관악구 · 상황실 대형 화면</p>
+      </div>
+      <ul class="o-counts" aria-label="장치 상태 요약">
+        <li class="o-count"><span class="l"><span data-icon="good"></span>정상</span><span class="v" id="oGood">0</span></li>
+        <li class="o-count warn" id="oWarnBox"><span class="l"><span data-icon="warn"></span>주의</span><span class="v" id="oWarn">0</span></li>
+        <li class="o-count crit" id="oCritBox"><span class="l"><span data-icon="crit"></span>위험</span><span class="v" id="oCrit">0</span></li>
+      </ul>
+      <div class="o-right">
+        <p class="o-clock" id="oClock">--:--:--</p>
+        <button type="button" class="btn sm" id="oFull">전체 화면으로 보기</button>
+      </div>
+    </div>
+    <div class="o-body">
+      <div class="o-map" id="oMap"></div>
+      <section class="o-side" aria-labelledby="oListH">
+        <div class="card-head"><h2 id="oListH">위험·주의 장치</h2><span class="sub" id="oListMeta"></span></div>
+        <ul class="o-list" id="oList"></ul>
+      </section>
+    </div>
+    <section class="o-events" aria-labelledby="oEvH">
+      <div class="card-head"><h2 id="oEvH">최근 상태 변화</h2><span class="sub">위치는 예시 배치 · GA-001만 실증 장치</span></div>
+      <ul class="o-ev-list" id="oEvents"></ul>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <strong>빗물받이 모니터링</strong>
+    <p>졸업 캡스톤디자인 개념증명 데모입니다. 실제 관악구청 서비스가 아니며, GA-001을 뺀 장치 49대와 지난 기록은 가상 데이터입니다.</p>
+    <p>데이터: GA-001 실측값(ThingSpeak 채널 3570123) · 디자인 기준: 디지털 정부서비스 UI/UX 가이드라인(2025.08)</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- 상태 아이콘 (색 + 모양 + 글자로 상태 표시, p.78·p.87) ----------
+  function icon(st, size){
+    size = size || 14;
+    var inner = st === "off" ? '<circle cx="7" cy="7" r="4.6" fill="none" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="2.4 1.6"/>'
+      : st === "crit" ? '<rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="var(--crit-icon)"/>'
+      : st === "warn" ? '<polygon points="7,1.5 12.8,12 1.2,12" fill="var(--warn-icon)"/>'
+      : '<circle cx="7" cy="7" r="3.8" fill="var(--ok-icon)"/>';
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" aria-hidden="true">' + inner + '</svg>';
+  }
+  document.querySelectorAll("[data-icon]").forEach(function(el){ el.outerHTML = icon(el.getAttribute("data-icon"), 16); });
+
+  // ---------- 상수 ----------
+  var REAL_UNIT_ID = "GA-001";
+
+  // ---------- ThingSpeak (GA-001 실측값) ----------
+  var TS_CHANNEL_ID = 3570123;
+  var TS_READ_KEY = "";          // 채널이 비공개면 Read API Key를 넣기 (공개 채널이면 비워둠)
+  var TS_POLL_MS = 15000;        // 15초마다 새 값 확인
+  var OFFLINE_MS = 60000;        // 아두이노는 20초마다 보냄 → 1분 넘게 새 값이 없으면 통신 끊김
+  var DONGS = ["보라매동","청림동","성현동","행운동","낙성대동","청룡동","은천동","중앙동","인헌동","남현동","서원동","신원동","서림동","신사동","신림동","난향동","조원동","대학동","삼성동","미성동","난곡동"];
+
+  // 수위 센서 2개(각 4cm) 사이 5cm 갭: 센서A 0~4cm, 갭 4~9cm, 센서B 9~13cm
+  var WATER_A_CM = 4, WATER_GAP_CM = 5, WATER_B_CM = 4;
+  var WATER_TOTAL_CM = WATER_A_CM + WATER_GAP_CM + WATER_B_CM;
+  var OVER_CM = WATER_A_CM + WATER_GAP_CM;
+  var A_PCT = WATER_A_CM / WATER_TOTAL_CM * 100;
+  var B_PCT = OVER_CM / WATER_TOTAL_CM * 100;
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function sensorAPercent(level){ return level >= WATER_A_CM ? 100 : level / WATER_A_CM * 100; }
+  function sensorBPercent(level){ return level < OVER_CM ? 0 : clamp((level - OVER_CM) / WATER_B_CM * 100, 0, 100); }
+  // 갭 구간에서는 정확한 수위를 모르므로 센서A 경계에서 멈춰 그린다
+  function displayFillPercent(level){
+    if (sensorBPercent(level) > 0) return level / WATER_TOTAL_CM * 100;
+    if (sensorAPercent(level) >= 100) return A_PCT;
+    return level / WATER_TOTAL_CM * 100;
+  }
+
+  function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var seeded = rng(20261107);
+  var rand = Math.random;
+
+  // ---------- 초기 시나리오: 호우주의보, 위험 2 / 주의 5 ----------
+  var INIT = {
+    0:{target:2.4, mins:14},
+    7:{target:9.7, mins:12, rise:46},
+    31:{target:0.1, f1:100, mins:4},
+    3:{target:2.5, mins:26},
+    18:{target:0.1, f2:86, mins:9},
+    26:{target:2.8, mins:41},
+    44:{target:2.2, mins:3}
+  };
+  var now0 = Date.now();
+  var units = [];
+  for (var i = 0; i < 50; i++){
+    var init = INIT[i] || {};
+    var u = {
+      id: "GA-" + String(i + 1).padStart(3, "0"),
+      dong: i === 0 ? "신림동" : DONGS[Math.floor(seeded() * DONGS.length)],
+      real: i === 0, hasRealData: false, x: 0, y: 0,
+      target: init.target != null ? init.target : 0.05 + seeded() * 0.1,
+      fill1: init.f1 != null ? init.f1 : Math.round(8 + seeded() * 55),
+      fill2: init.f2 != null ? init.f2 : Math.round(6 + seeded() * 50),
+      riseSeconds: init.rise || null, tier1At: null, updated: new Date()
+    };
+    var xy = pickXY(); u.x = xy[0]; u.y = xy[1];
+    u.level = u.target;
+    u.tier = u.level >= OVER_CM ? "OVERFLOW" : (u.level >= 0.3 ? "TIER1" : "NORMAL");
+    u.full1 = u.fill1 >= 100; u.full2 = u.fill2 >= 100;
+    u.status = statusOf(u);
+    u.since = now0 - (init.mins != null ? init.mins : 60 + Math.floor(seeded() * 300)) * 60000;
+    units.push(u);
+  }
+  // GA-001은 시뮬레이션하지 않고 ThingSpeak 값만 쓴다. 첫 값이 오기 전에는 "통신 끊김(대기)"
+  (function(u){
+    u.everData = false; u.offline = true; u.level = 0; u.tier = "NORMAL"; u.fill1 = 0; u.fill2 = 0;
+    u.full1 = false; u.full2 = false; u.riseSeconds = null; u.blocked = 0; u.status = "off"; u.since = now0;
+  })(units[0]);
+  var byId = {}; units.forEach(function(u){ byId[u.id] = u; });
+
+  // 예시 배치: 표시가 서로 겹치지 않도록 최소 간격을 두고 뽑는다
+  function pickXY(){
+    var px, py;
+    for (var k = 0; k < 200; k++){
+      px = 28 + seeded() * 330; py = 22 + seeded() * 196;
+      var ok = units.every(function(o){ var dx = o.x - px, dy = o.y - py; return dx * dx + dy * dy > 30 * 30; });
+      if (ok) break;
+    }
+    return [px, py];
+  }
+
+  function statusOf(u){
+    if (u.real && u.offline) return "off";
+    if (u.tier === "OVERFLOW" || u.full1 || u.full2) return "crit";
+    if (u.tier === "TIER1" || u.fill1 >= 80 || u.fill2 >= 80) return "warn";
+    return "good";
+  }
+  function reasonOf(u){
+    if (u.real && u.offline) return u.everData ? "1분 넘게 새 값 없음" : "실측값 대기 중";
+    if (u.tier === "OVERFLOW") return "마지노선 수위 · 입구 차단";
+    if (u.full1 && u.full2) return "수납함 1·2 가득 참";
+    if (u.full1) return "수납함1 가득 참";
+    if (u.full2) return "수납함2 가득 참";
+    if (u.tier === "TIER1") return "강우 감지 · 수위 상승";
+    if (u.fill1 >= 80) return "수납함1 " + Math.round(u.fill1) + "%";
+    if (u.fill2 >= 80) return "수납함2 " + Math.round(u.fill2) + "%";
+    return "";
+  }
+  var LABEL = {good:"정상", warn:"주의", crit:"위험", off:"통신 끊김"};
+  var SEV = {crit:0, off:1, warn:2, good:3};
+
+  // 상태 변화 기록 (상황실 "최근 상태 변화", 이력 "오늘" 칸에 사용)
+  var events = [];
+  units.forEach(function(u){
+    if (u.status !== "good") events.push({t:u.since, id:u.id, dong:u.dong, from:"good", to:u.status, why:reasonOf(u)});
+  });
+  events.sort(function(a,b){ return a.t - b.t; });
+  function setStatus(u, st, t){
+    if (st === u.status) return;
+    events.push({t:t, id:u.id, dong:u.dong, from:u.status, to:st, why: st === "good" ? "정상 복귀" : reasonOf(u)});
+    if (events.length > 200) events.shift();
+    u.status = st; u.since = t;
+  }
+
+  function durText(u){
+    var m = Math.floor((Date.now() - u.since) / 60000);
+    if (m < 1) return "방금";
+    if (m < 60) return m + "분째";
+    return Math.floor(m / 60) + "시간 " + (m % 60) + "분째";
+  }
+  function fmtTime(d){ return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function(n){ return String(n).padStart(2, "0"); }).join(":"); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+  function badge(st, text){ return '<span class="badge ' + st + '">' + icon(st) + (text || LABEL[st]) + '</span>'; }
+  function sourceText(u){
+    if (u.real){
+      if (!u.everData) return tsInfo.ok === false ? "실측 장치 · ThingSpeak 연결 실패" : "실측 장치 · 첫 값 기다리는 중";
+      return "실측 장치 · ThingSpeak 채널 " + TS_CHANNEL_ID + (u.offline ? " · 통신 끊김" : "");
+    }
+    return "가상 장치(시뮬레이션)";
+  }
+  function blockedText(b){ return ["없음", "와이퍼A", "와이퍼B", "와이퍼A·B"][b] || "-"; }
+
+  // ---------- 화면 상태 ----------
+  var selectedId = null;
+  var filter = {st:"all", dong:"", q:"", sort:"sev"};
+  var actionLog = [];
+  var view = "pc";
+
+  // ---------- ThingSpeak에서 GA-001 실측값 읽기 ----------
+  var tsInfo = {ok:null, error:""};
+  function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+  function pollThingSpeak(){
+    var url = "https://api.thingspeak.com/channels/" + TS_CHANNEL_ID + "/feeds/last.json" +
+              (TS_READ_KEY ? "?api_key=" + encodeURIComponent(TS_READ_KEY) : "");
+    fetch(url, {cache:"no-store"}).then(function(r){
+      if (!r.ok) throw new Error("응답 코드 " + r.status + (r.status === 400 || r.status === 403 ? " (채널이 비공개인지 확인)" : ""));
+      return r.json();
+    }).then(function(d){
+      tsInfo.ok = true; tsInfo.error = "";
+      if (d && typeof d === "object" && d.created_at) applyReal(byId[REAL_UNIT_ID], d);
+      else tsInfo.error = "";
+      checkOffline(); render();
+    }).catch(function(err){
+      tsInfo.ok = false;
+      tsInfo.error = String((err && err.message) || err);
+      checkOffline(); render();
+    });
+  }
+  // ThingSpeak 필드 → 화면 값 (아두이노 코드의 field1~8 정의와 같음)
+  function applyReal(u, d){
+    var waterA = num(d.field1), tier = num(d.field3), full = num(d.field6);
+    u.everData = true;
+    u.updated = new Date(d.created_at);
+    u.level = waterA / 100 * WATER_A_CM;       // 센서 B 설치 전: 센서 A(0~4cm) 값만 반영
+    u.tier = tier >= 2 ? "OVERFLOW" : (tier >= 1 ? "TIER1" : "NORMAL");
+    u.overflowBySensorA = tier >= 2;           // 지금은 센서 A 맨 위를 마지노선으로 판단
+    u.fill1 = num(d.field4); u.fill2 = num(d.field5);
+    u.full1 = (full & 1) === 1; u.full2 = (full & 2) === 2;
+    u.riseSeconds = num(d.field7) || null;
+    u.blocked = num(d.field8);
+  }
+  function checkOffline(){
+    var u = byId[REAL_UNIT_ID];
+    u.offline = !u.everData || (Date.now() - u.updated.getTime() > OFFLINE_MS);
+    setStatus(u, statusOf(u), Date.now());
+  }
+
+  // ---------- 시뮬레이션 ----------
+  function step(u){
+    if (u.real){ checkOffline(); return; }
+    if (u.tier === "NORMAL" && rand() < 0.0004) u.target = 2 + rand() * 1.5;
+    else if (u.tier === "TIER1" && rand() < 0.004) u.target = 0.05;
+    else if (u.tier === "TIER1" && rand() < 0.0012) u.target = 9.7;
+    else if (u.tier === "OVERFLOW" && rand() < 0.01) u.target = 2;
+
+    u.level = clamp(u.level + (u.target - u.level) * 0.2 + (rand() - 0.5) * 0.12, 0, WATER_TOTAL_CM);
+    var debris = u.tier === "NORMAL" ? 0.01 : 0.22;
+    u.fill1 = clamp(u.fill1 + rand() * debris, 0, 100);
+    u.fill2 = clamp(u.fill2 + rand() * debris, 0, 100);
+    if (u.fill1 >= 100) u.full1 = true; else if (u.fill1 < 80) u.full1 = false;
+    if (u.fill2 >= 100) u.full2 = true; else if (u.fill2 < 80) u.full2 = false;
+
+    var prev = u.tier, t = Date.now();
+    if (u.tier === "OVERFLOW"){ if (u.level < OVER_CM - 2) u.tier = "TIER1"; }
+    else if (u.tier === "TIER1"){ if (u.level >= OVER_CM) u.tier = "OVERFLOW"; else if (u.level < 0.2) u.tier = "NORMAL"; }
+    else if (u.level >= 0.3) u.tier = "TIER1";
+    if (prev === "NORMAL" && u.tier === "TIER1"){ u.tier1At = t; u.riseSeconds = null; }
+    if (prev === "TIER1" && u.tier === "OVERFLOW" && u.tier1At) u.riseSeconds = Math.round((t - u.tier1At) / 1000);
+
+    setStatus(u, statusOf(u), t);
+    u.updated = new Date();
+  }
+
+  // ---------- 모니터링 화면 ----------
+  function attentionList(){
+    return units.filter(function(u){ return u.status !== "good"; })
+      .sort(function(a,b){ return (SEV[a.status] - SEV[b.status]) || (a.since - b.since); });
+  }
+
+  function renderTiles(counts){
+    document.getElementById("tTotal").textContent = units.length;
+    document.getElementById("tGood").textContent = counts.good;
+    document.getElementById("tGoodS").textContent = "전체의 " + Math.round(counts.good / units.length * 100) + "%";
+    document.getElementById("tWarn").textContent = counts.warn;
+    document.getElementById("tCrit").textContent = counts.crit;
+    document.getElementById("tileWarn").classList.toggle("on", counts.warn > 0);
+    document.getElementById("tileCrit").classList.toggle("on", counts.crit > 0);
+  }
+
+  // 긴급 공지는 하나만 (p.362): 호우주의보 + 위험 장치 수를 한 문장으로
+  function renderCritical(counts){
+    var text = "호우주의보 발효 중(예시)";
+    text += counts.crit ? " · 위험 장치 " + counts.crit + "대, 입구 차단 중" : " · 위험 장치 없음";
+    document.getElementById("caText").textContent = text;
+  }
+
+  function renderAttention(att){
+    var box = document.getElementById("attList");
+    document.getElementById("attMeta").textContent = att.length + "대 · 위험 먼저, 오래된 순";
+    if (!att.length){ box.innerHTML = '<li class="empty">조치가 필요한 장치가 없습니다.</li>'; return; }
+    box.innerHTML = att.map(function(u){
+      return '<li class="sl-item' + (u.id === selectedId ? " sel" : "") + '">' +
+        badge(u.status) +
+        '<div><p class="sl-title num">' + u.id + ' · ' + esc(u.dong) + '</p><p class="sl-desc">' + reasonOf(u) + ' · ' + (u.real ? "실증 장치" : "가상 장치") + '</p></div>' +
+        '<p class="sl-dur">' + durText(u) + '</p>' +
+        '<button type="button" class="btn sm" data-id="' + u.id + '" aria-label="' + u.id + ' 상세 보기">상세 보기</button></li>';
+    }).join("");
+  }
+
+  function mapMark(u, big){
+    var x = Math.round(u.x * 10) / 10, y = Math.round(u.y * 10) / 10, s = "";
+    var k = big ? 1.2 : 1;
+    if (!big && u.id === selectedId) s += '<circle cx="' + x + '" cy="' + y + '" r="13" fill="none" stroke="var(--link)" stroke-width="2.5"/>';
+    if (u.status === "crit"){
+      s += '<circle class="ring" cx="' + x + '" cy="' + y + '" r="' + (12 * k) + '" fill="none" stroke="var(--crit-icon)" stroke-width="2"/>' +
+           '<rect x="' + (x - 5.5 * k) + '" y="' + (y - 5.5 * k) + '" width="' + (11 * k) + '" height="' + (11 * k) + '" transform="rotate(45 ' + x + ' ' + y + ')" fill="var(--crit-icon)" stroke="var(--map)" stroke-width="1.5"/>';
+    } else if (u.status === "warn"){
+      s += '<polygon points="' + x + ',' + (y - 7 * k) + ' ' + (x + 6.5 * k) + ',' + (y + 5 * k) + ' ' + (x - 6.5 * k) + ',' + (y + 5 * k) + '" fill="var(--warn-icon)"/>';
+    } else if (u.status === "off"){
+      s += '<circle cx="' + x + '" cy="' + y + '" r="' + (5.5 * k) + '" fill="var(--map)" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="3 2"/>';
+    } else {
+      s += '<circle cx="' + x + '" cy="' + y + '" r="3.6" fill="var(--ok-icon)"/>';
+      return big ? s : '<g data-id="' + u.id + '"><title>' + u.id + ' ' + esc(u.dong) + ' · 정상</title>' + s + '<circle cx="' + x + '" cy="' + y + '" r="10" fill="transparent"/></g>';
+    }
+    if (big){
+      var right = x < 330;
+      s += '<text x="' + (right ? x + 13 : x - 13) + '" y="' + (y + 3.5) + '" text-anchor="' + (right ? "start" : "end") + '" font-size="10" font-weight="700" fill="var(--text)" stroke="var(--map)" stroke-width="3" paint-order="stroke" font-family="Noto Sans KR, sans-serif">' + u.id + '</text>';
+      return s;
+    }
+    return '<g data-id="' + u.id + '"><title>' + u.id + ' ' + esc(u.dong) + ' · ' + LABEL[u.status] + '</title>' + s + '<circle cx="' + x + '" cy="' + y + '" r="10" fill="transparent"/></g>';
+  }
+  function mapSvg(counts, big){
+    var grid = "";
+    for (var gx = 40; gx < 400; gx += 40) grid += '<line x1="' + gx + '" y1="0" x2="' + gx + '" y2="240" stroke="var(--mapline)"/>';
+    for (var gy = 40; gy < 240; gy += 40) grid += '<line x1="0" y1="' + gy + '" x2="400" y2="' + gy + '" stroke="var(--mapline)"/>';
+    var order = units.slice().sort(function(a,b){ return (SEV[b.status] - SEV[a.status]) || ((a.id === selectedId) - (b.id === selectedId)); });
+    return '<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="장치 위치 예시 지도: 위험 ' + counts.crit + '곳, 주의 ' + counts.warn + '곳, 정상 ' + counts.good + '곳">' +
+      '<rect width="400" height="240" fill="var(--map)"/>' + grid + order.map(function(u){ return mapMark(u, big); }).join("") +
+      (big ? "" : '<text x="8" y="232" font-size="10" fill="var(--text-2)" font-family="Noto Sans KR, sans-serif">실제 지도는 GIS 연동 후 표시 · 지금 위치는 예시</text>') + '</svg>';
+  }
+
+  function renderDetail(){
+    var u = byId[selectedId];
+    var el = document.getElementById("detail");
+    if (!u){ el.innerHTML = '<p class="empty">목록이나 지도에서 장치를 선택하세요.</p>'; return; }
+    var waterCls = u.tier === "OVERFLOW" ? "crit" : (u.tier === "TIER1" ? "warn" : "");
+    var gapUnknown = sensorAPercent(u.level) >= 100 && sensorBPercent(u.level) === 0;
+    function boxMeter(n, v, full){
+      var cls = full || v >= 100 ? "crit" : (v >= 80 ? "warn" : "box");
+      return '<div class="meter"><div class="meter-label">수납함' + n + ' 적재율<b>' + Math.round(v) + '%</b></div>' +
+        '<div class="track"><div class="fill ' + cls + '" style="width:' + clamp(v,0,100) + '%"></div></div>' +
+        (full ? '<span class="full-flag">가득 참 · 입구 차단</span>' : '') + '</div>';
+    }
+    var logs = actionLog.filter(function(l){ return l.id === u.id; }).slice(-3).reverse();
+    el.innerHTML =
+      '<div class="detail-top"><div><h2 id="hDetail">' + esc(u.dong) + ' <span class="num">' + u.id + '</span></h2>' +
+        '<p class="detail-src">' + sourceText(u) + ' · 마지막 갱신 <span class="num">' + fmtTime(u.updated) + '</span></p></div>' +
+        badge(u.status, LABEL[u.status] + (u.status !== "good" ? " · " + durText(u) : "")) + '</div>' +
+      '<div class="meter"><div class="meter-label">수위 (센서A·B, 사이 갭 ' + WATER_GAP_CM + 'cm)<b>' + u.level.toFixed(1) + ' / ' + WATER_TOTAL_CM + 'cm</b></div>' +
+        '<div class="track"><div class="gap-band" style="left:' + A_PCT + '%;width:' + (B_PCT - A_PCT) + '%"></div>' +
+        '<div class="fill ' + waterCls + '" style="width:' + displayFillPercent(u.level) + '%"></div>' +
+        '<div class="tick" style="left:' + A_PCT + '%"></div><div class="tick" style="left:' + B_PCT + '%"></div></div>' +
+        '<span class="meter-sub">센서A ' + Math.round(sensorAPercent(u.level)) + '% · 센서B ' + Math.round(sensorBPercent(u.level)) + '%' +
+          (gapUnknown ? ' · 갭 구간이라 정확한 수위는 알 수 없음' : '') +
+          (u.riseSeconds != null ? ' · A→B 상승 ' + u.riseSeconds + '초' : '') +
+          (u.overflowBySensorA ? ' · 센서 B 설치 전이라 센서 A 맨 위를 마지노선으로 판단' : '') + '</span></div>' +
+      '<div class="boxes">' + boxMeter(1, u.fill1, u.full1) + boxMeter(2, u.fill2, u.full2) + '</div>' +
+      (u.real && u.everData ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + '</p>' : '') +
+      '<div class="actions">' +
+        '<button type="button" class="btn primary" data-act="dispatch">현장 확인 요청하기</button>' +
+        '<button type="button" class="btn secondary" data-act="clean">청소 완료 처리하기</button>' +
+      '</div>' +
+      '<ul class="log">' + (logs.length ? logs.map(function(l){ return '<li><time>' + l.time + '</time>' + l.text + '</li>'; }).join("") : '<li>아직 조치 기록이 없습니다.</li>') + '</ul>';
+  }
+
+  var SORT_LABEL = {sev:"상태 심각도순", id:"장치번호순", dong:"동 이름순"};
+  function renderTable(){
+    var q = filter.q.trim();
+    var rows = units.filter(function(u){
+      if (filter.st !== "all" && u.status !== filter.st) return false;
+      if (filter.dong && u.dong !== filter.dong) return false;
+      if (q && u.id.indexOf(q.toUpperCase()) < 0 && u.dong.indexOf(q) < 0) return false;
+      return true;
+    });
+    rows.sort(function(a,b){
+      if (filter.sort === "id") return a.id < b.id ? -1 : 1;
+      if (filter.sort === "dong") return a.dong.localeCompare(b.dong, "ko") || (a.id < b.id ? -1 : 1);
+      return (SEV[a.status] - SEV[b.status]) || (a.since - b.since);
+    });
+    document.querySelectorAll("#pcView thead th[data-col]").forEach(function(th){
+      if (th.getAttribute("data-col") === filter.sort) th.setAttribute("aria-sort", filter.sort === "sev" ? "descending" : "ascending");
+      else th.removeAttribute("aria-sort");
+    });
+    document.getElementById("tableMeta").textContent = units.length + "대 중 " + rows.length + "대 표시";
+    var applied = [];
+    if (filter.st !== "all") applied.push("상태 " + LABEL[filter.st]);
+    if (filter.dong) applied.push(filter.dong);
+    if (q) applied.push("검색어 '" + esc(q) + "'");
+    document.getElementById("applied").innerHTML = "적용된 조건: <b>" + (applied.length ? applied.join(" · ") : "없음") + "</b> · 정렬: " + SORT_LABEL[filter.sort];
+    document.getElementById("tbody").innerHTML = rows.length ? rows.map(function(u){
+      return '<tr>' +
+        '<td><button type="button" class="link-btn" data-id="' + u.id + '">' + u.id + '</button>' + (u.real ? '<span class="src-note">실증</span>' : '') + '</td>' +
+        '<td>' + esc(u.dong) + '</td>' +
+        '<td>' + badge(u.status) + '</td>' +
+        '<td>' + (reasonOf(u) || '-') + '</td>' +
+        '<td class="r">' + (u.status !== "good" ? durText(u) : '-') + '</td>' +
+        '<td class="r">' + u.level.toFixed(1) + 'cm</td>' +
+        '<td class="r">' + Math.round(u.fill1) + '%</td><td class="r">' + Math.round(u.fill2) + '%</td></tr>';
+    }).join("") : '<tr><td colspan="8" class="muted" style="text-align:center">조건에 맞는 장치가 없습니다. 조건 초기화를 눌러 주세요.</td></tr>';
+  }
+
+  // ---------- 상황실 ----------
+  function hhmm(t){ var d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+  function renderOps(counts, att){
+    document.getElementById("oGood").textContent = counts.good;
+    document.getElementById("oWarn").textContent = counts.warn;
+    document.getElementById("oCrit").textContent = counts.crit;
+    document.getElementById("oWarnBox").classList.toggle("on", counts.warn > 0);
+    document.getElementById("oCritBox").classList.toggle("on", counts.crit > 0);
+    document.getElementById("oMap").innerHTML = mapSvg(counts, true);
+
+    var shown = att.slice(0, 6);
+    document.getElementById("oListMeta").textContent = att.length ? att.length + "대" : "";
+    document.getElementById("oList").innerHTML = shown.length ? shown.map(function(u){
+      return '<li class="o-item ' + u.status + '">' + icon(u.status, 28).replace('<svg', '<svg class="ic"') +
+        '<span class="who">' + u.id + ' ' + esc(u.dong) + '</span>' +
+        '<span class="why">' + LABEL[u.status] + ' · ' + reasonOf(u) + '</span>' +
+        '<span class="dur">' + durText(u).replace("째", "") + '<small>지속</small></span></li>';
+    }).join("") + (att.length > 6 ? '<li class="o-more">외 ' + (att.length - 6) + '대는 모니터링 화면에서 확인</li>' : '')
+      : '<li class="empty">모든 장치 정상</li>';
+
+    var recent = events.slice(-4).reverse();
+    document.getElementById("oEvents").innerHTML = recent.map(function(e){
+      return '<li class="o-ev to-' + e.to + '"><time>' + hhmm(e.t) + '</time><b>' + e.id + ' ' + esc(e.dong) + '</b>' +
+        '<span>' + LABEL[e.from] + ' → ' + LABEL[e.to] + ' · ' + e.why + '</span></li>';
+    }).join("");
+  }
+
+  // ---------- 이력 ----------
+  var DAY = 86400000;
+  var day0 = new Date(); day0.setHours(0, 0, 0, 0);
+  var T0 = day0.getTime();
+  var hr = rng(424242);
+  var RAIN = {3:0.5, 4:0.9, 9:0.3, 15:0.7, 16:1.0, 17:0.6, 22:0.4, 26:0.8};
+  var TODAY_RAIN = 0.8;
+  var HOT = {7:1, 31:1, 12:1, 40:1, 23:1};
+  var history = [];
+  (function buildHistory(){
+    units.forEach(function(u, i){ u.prop = HOT[i] ? 0.35 + hr() * 0.2 : 0.03 + hr() * 0.07; });
+    for (var d = 0; d < 29; d++){
+      var start = T0 - (29 - d) * DAY, inten = RAIN[d] || 0;
+      units.forEach(function(u){
+        if (inten > 0 && hr() < 0.2 + 0.5 * inten){
+          var tw = start + (6 + hr() * 14) * 3600000;
+          history.push({t:tw, id:u.id, dong:u.dong, type:"warn", why:"강우 감지 · 수위 상승"});
+          if (hr() < u.prop * (0.6 + inten)){
+            var tc = tw + (5 + hr() * 40) * 60000;
+            history.push({t:tc, id:u.id, dong:u.dong, type:"crit", why:"마지노선 수위 · 입구 차단", rise:Math.round(25 + (1 - inten) * 80 + hr() * 25)});
+            var resp = (15 + hr() * 150) * 60000;
+            history.push({t:tc + resp, id:u.id, dong:u.dong, type:"clean", why:"현장 출동 · 청소 완료", resp:resp});
+          } else {
+            history.push({t:tw + (1 + hr() * 4) * 3600000, id:u.id, dong:u.dong, type:"recover", why:"비 그침 · 정상 복귀"});
+          }
+        } else if (inten === 0 && hr() < u.prop * 0.12){
+          var tf = start + (9 + hr() * 9) * 3600000;
+          history.push({t:tf, id:u.id, dong:u.dong, type:"crit", why:"수납함" + (hr() < 0.5 ? 1 : 2) + " 가득 참"});
+          var resp2 = (30 + hr() * 240) * 60000;
+          history.push({t:tf + resp2, id:u.id, dong:u.dong, type:"clean", why:"수납함 비움", resp:resp2});
+        } else if (hr() < 0.012){
+          history.push({t:start + (10 + hr() * 6) * 3600000, id:u.id, dong:u.dong, type:"clean", why:"정기 청소"});
+        }
+      });
+    }
+    history = history.filter(function(r){ return r.t < T0; });
+  })();
+
+  var KIND = {crit:"위험", warn:"주의", clean:"청소", recover:"정상 복귀", dispatch:"확인 요청", off:"통신 끊김"};
+  var KIND_BADGE = {crit:"crit", warn:"warn", clean:"info", recover:"good", dispatch:"info", off:"off"};
+  var hFilter = {kind:"all", id:""};
+
+  function allRecords(){
+    var today = events.filter(function(e){ return e.t >= T0; }).map(function(e){
+      return {t:e.t, id:e.id, dong:e.dong, type: e.to === "good" ? "recover" : e.to, why:e.why};
+    });
+    var acts = actionLog.map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id].dong, type:l.kind, why:l.text}; });
+    return history.concat(today, acts).sort(function(a,b){ return b.t - a.t; });
+  }
+  function fmtDur(ms){ var m = Math.round(ms / 60000); return m < 60 ? m + "분" : Math.floor(m / 60) + "시간 " + (m % 60) + "분"; }
+  function md(t){ var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate(); }
+  function mdhm(t){ var d = new Date(t); return (d.getMonth() + 1) + "/" + String(d.getDate()).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+  function kindBadge(type){
+    var st = KIND_BADGE[type];
+    if (st === "info" || st === "good") return '<span class="badge ' + st + '">' + KIND[type] + '</span>';
+    return badge(st, KIND[type]);
+  }
+
+  function renderHistory(){
+    var recs = allRecords();
+    var n = {warn:0, crit:0, clean:0}, respSum = 0, respN = 0;
+    recs.forEach(function(r){ if (n[r.type] != null) n[r.type]++; if (r.resp){ respSum += r.resp; respN++; } });
+    document.getElementById("hTiles").innerHTML =
+      '<li class="tile"><span class="l">' + icon("crit", 16) + '위험 발생</span><span class="v num">' + n.crit + '</span><span class="s">30일 합계</span></li>' +
+      '<li class="tile"><span class="l">' + icon("warn", 16) + '주의 발생</span><span class="v num">' + n.warn + '</span><span class="s">30일 합계</span></li>' +
+      '<li class="tile"><span class="l">청소 완료</span><span class="v num">' + n.clean + '</span><span class="s">현장 출동 + 정기 청소</span></li>' +
+      '<li class="tile"><span class="l">평균 대응 시간</span><span class="v num" style="font-size:2rem">' + (respN ? fmtDur(respSum / respN) : "-") + '</span><span class="s">위험 발생 → 청소 완료</span></li>';
+
+    var days = [];
+    for (var d = 0; d < 30; d++) days.push({warn:0, crit:0, rain: d < 29 ? (RAIN[d] || 0) : TODAY_RAIN, start: T0 - (29 - d) * DAY});
+    recs.forEach(function(r){
+      var di = r.t >= T0 ? 29 : 29 - Math.ceil((T0 - r.t) / DAY);
+      if (di < 0 || di > 29) return;
+      if (r.type === "warn") days[di].warn++;
+      else if (r.type === "crit") days[di].crit++;
+    });
+    var W = 760, H = 240, L = 34, Rm = 8, Tp = 12, Bm = 30, pw = W - L - Rm, ph = H - Tp - Bm, band = pw / 30, bw = band * 0.62;
+    var max = 1; days.forEach(function(x){ max = Math.max(max, x.warn + x.crit); });
+    var stepV = max > 40 ? 10 : (max > 20 ? 5 : (max > 8 ? 2 : 1));
+    var topV = Math.ceil(max / stepV) * stepV;
+    function yv(v){ return Tp + ph - v / topV * ph; }
+    var s = "";
+    days.forEach(function(x, i){ if (x.rain > 0) s += '<rect x="' + (L + i * band) + '" y="' + Tp + '" width="' + band + '" height="' + ph + '" fill="var(--rain)"/>'; });
+    for (var v = 0; v <= topV; v += stepV){
+      s += '<line x1="' + L + '" x2="' + (W - Rm) + '" y1="' + yv(v) + '" y2="' + yv(v) + '" stroke="var(--line)"/>' +
+           '<text x="' + (L - 6) + '" y="' + (yv(v) + 3.5) + '" text-anchor="end" font-size="10" fill="var(--text-2)" font-family="Noto Sans KR, sans-serif">' + v + '</text>';
+    }
+    days.forEach(function(x, i){
+      var bx = L + i * band + (band - bw) / 2, base = yv(0);
+      var yc = yv(x.crit), yw = yv(x.crit + x.warn);
+      s += '<g><title>' + md(x.start) + (i === 29 ? " (오늘)" : "") + ' · 주의 ' + x.warn + ' · 위험 ' + x.crit + (x.rain > 0 ? " · 강우" : "") + '</title>';
+      if (x.warn) s += '<rect x="' + bx + '" y="' + yw + '" width="' + bw + '" height="' + (yc - yw) + '" fill="var(--warn-icon)"/>';
+      if (x.crit) s += '<rect x="' + bx + '" y="' + yc + '" width="' + bw + '" height="' + (base - yc) + '" fill="var(--crit-icon)"/>';
+      s += '<rect x="' + (L + i * band) + '" y="' + Tp + '" width="' + band + '" height="' + ph + '" fill="transparent"/></g>';
+      if (i % 5 === 0 || i === 29){
+        s += '<text x="' + (L + i * band + band / 2) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10" fill="' + (i === 29 ? "var(--text)" : "var(--text-2)") + '" font-weight="' + (i === 29 ? 700 : 400) + '" font-family="Noto Sans KR, sans-serif">' + (i === 29 ? "오늘" : md(x.start)) + '</text>';
+      }
+    });
+    s += '<line x1="' + L + '" x2="' + (W - Rm) + '" y1="' + yv(0) + '" y2="' + yv(0) + '" stroke="var(--border)"/>';
+    document.getElementById("hChart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="최근 30일 일별 주의·위험 발생 건수, 비 온 날 표시">' + s + '</svg>';
+
+    var agg = {};
+    recs.forEach(function(r){
+      var a = agg[r.id] || (agg[r.id] = {id:r.id, dong:r.dong, crit:0, warn:0, clean:0, rs:0, rn:0});
+      if (r.type === "crit") a.crit++; else if (r.type === "warn") a.warn++; else if (r.type === "clean") a.clean++;
+      if (r.rise){ a.rs += r.rise; a.rn++; }
+    });
+    var list = Object.keys(agg).map(function(k){ return agg[k]; })
+      .sort(function(a,b){ return (b.crit - a.crit) || (b.warn - a.warn); }).slice(0, 8);
+    document.getElementById("hTop").innerHTML = list.map(function(a, i){
+      return '<tr><td class="r">' + (i + 1) + '</td>' +
+        '<td><button type="button" class="link-btn" data-hid="' + a.id + '">' + a.id + '</button> ' + esc(a.dong) + (a.crit >= 3 ? '<span class="hot">집중관리 후보</span>' : '') + '</td>' +
+        '<td class="r">' + a.crit + '</td><td class="r">' + a.warn + '</td><td class="r">' + a.clean + '</td>' +
+        '<td class="r">' + (a.rn ? Math.round(a.rs / a.rn) + '초' : '-') + '</td></tr>';
+    }).join("");
+
+    var rows = recs.filter(function(r){
+      if (hFilter.kind !== "all" && r.type !== hFilter.kind) return false;
+      if (hFilter.id && r.id !== hFilter.id) return false;
+      return true;
+    });
+    document.getElementById("hLogMeta").textContent = rows.length + "건" + (rows.length > 300 ? " 중 최근 300건 표시" : "");
+    document.getElementById("hLog").innerHTML = rows.length ? rows.slice(0, 300).map(function(r){
+      var extra = r.rise ? "A→B " + r.rise + "초" : (r.resp ? "대응 " + fmtDur(r.resp) : '-');
+      return '<tr><td class="num">' + mdhm(r.t) + '</td><td class="num">' + r.id + '</td><td>' + esc(r.dong) + '</td>' +
+        '<td>' + kindBadge(r.type) + '</td><td>' + esc(r.why) + '</td><td class="r">' + extra + '</td></tr>';
+    }).join("") : '<tr><td colspan="6" class="muted" style="text-align:center">조건에 맞는 기록이 없습니다. 조건 초기화를 눌러 주세요.</td></tr>';
+  }
+
+  // ---------- 전체 렌더 ----------
+  function render(){
+    var counts = {good:0, warn:0, crit:0, off:0};
+    units.forEach(function(u){ counts[u.status]++; });
+    var att = attentionList();
+    document.getElementById("tTotalS").textContent = "관악구 21개 동" + (counts.off ? " · 통신 끊김 " + counts.off + "대" : "");
+    document.getElementById("tsErr").textContent = tsInfo.ok === false ? "지금 ThingSpeak에서 값을 읽지 못하고 있습니다: " + tsInfo.error : "";
+    if (!selectedId || !byId[selectedId]) selectedId = att.length ? att[0].id : REAL_UNIT_ID;
+    renderCritical(counts);
+    renderTiles(counts);
+    renderAttention(att);
+    document.getElementById("map").innerHTML = mapSvg(counts, false);
+    renderDetail();
+    renderTable();
+    renderOps(counts, att);
+    if (view === "history") renderHistory();
+    document.getElementById("clock").textContent = fmtTime(new Date());
+  }
+
+  function select(id, focusDetail){
+    if (!byId[id]) return;
+    selectedId = id;
+    render();
+    if (focusDetail){
+      var d = document.getElementById("detail");
+      d.scrollIntoView({behavior:"smooth", block:"start"});
+      d.focus({preventScroll:true});
+    }
+  }
+
+  // ---------- 화면 모드 (기본 / 선명한 화면 모드) ----------
+  // 사용자가 직접 고르면 모든 화면에 같이 적용(p.201). 고르지 않았으면 상황실만 선명한 화면 모드로 시작.
+  var modePref = null;
+  try { modePref = localStorage.getItem("modePref"); } catch(e){}
+  if (modePref !== "basic" && modePref !== "hc") modePref = null;
+  function applyMode(){
+    var m = modePref || (view === "ops" ? "hc" : "basic");
+    document.documentElement.setAttribute("data-mode", m);
+    document.getElementById("modeBtn").setAttribute("aria-pressed", m === "hc" ? "true" : "false");
+  }
+  document.getElementById("modeBtn").addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-mode");
+    modePref = cur === "hc" ? "basic" : "hc";
+    try { localStorage.setItem("modePref", modePref); } catch(e){}
+    applyMode();
+  });
+
+  // ---------- 화면 크기 조정 (p.727) ----------
+  var fs = document.getElementById("fontSize");
+  try { var savedFs = localStorage.getItem("fontSize"); if (savedFs) fs.value = savedFs; } catch(e){}
+  function applyFont(){ document.documentElement.style.fontSize = fs.value + "%"; }
+  fs.addEventListener("change", function(){ applyFont(); try { localStorage.setItem("fontSize", fs.value); } catch(e){} });
+  applyFont();
+
+  // ---------- 화면 전환 (#pc / #ops / #history) ----------
+  function applyView(){
+    var h = location.hash;
+    view = h === "#ops" ? "ops" : (h === "#history" ? "history" : "pc");
+    document.getElementById("opsView").hidden = view !== "ops";
+    document.getElementById("pcView").hidden = view !== "pc";
+    document.getElementById("histView").hidden = view !== "history";
+    [["navPc","pc"],["navOps","ops"],["navHist","history"]].forEach(function(p){
+      var el = document.getElementById(p[0]);
+      if (view === p[1]) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
+    });
+    applyMode();
+    document.getElementById("oClock").textContent = fmtTime(new Date());
+    if (view === "history") renderHistory();
+  }
+  window.addEventListener("hashchange", applyView);
+
+  // 건너뛰기 링크와 긴급 공지 링크는 화면 전환 주소(#pc 등)를 건드리지 않고 이동만 한다
+  document.getElementById("skipLink").addEventListener("click", function(e){
+    e.preventDefault();
+    var m = document.getElementById("main");
+    m.focus(); m.scrollIntoView();
+  });
+  document.getElementById("caLink").addEventListener("click", function(e){
+    e.preventDefault();
+    if (location.hash !== "#pc" && location.hash !== "") location.hash = "#pc";
+    setTimeout(function(){
+      var a = document.getElementById("attention");
+      a.scrollIntoView({behavior:"smooth", block:"start"});
+      a.focus({preventScroll:true});
+    }, 0);
+  });
+
+  // ---------- 이벤트 ----------
+  document.getElementById("attList").addEventListener("click", function(e){
+    var b = e.target.closest("[data-id]"); if (b) select(b.getAttribute("data-id"), true);
+  });
+  document.getElementById("map").addEventListener("click", function(e){
+    var g = e.target.closest("[data-id]"); if (g) select(g.getAttribute("data-id"), false);
+  });
+  document.getElementById("tbody").addEventListener("click", function(e){
+    var b = e.target.closest("[data-id]"); if (b) select(b.getAttribute("data-id"), true);
+  });
+
+  // 처리 버튼: 두 번 누름 방지 (p.510)
+  document.getElementById("detail").addEventListener("click", function(e){
+    var b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+    var u = byId[selectedId]; if (!u) return;
+    var act = b.getAttribute("data-act");
+    b.disabled = true; b.textContent = "처리 중…";
+    setTimeout(function(){
+      var t = fmtTime(new Date());
+      if (act === "dispatch"){
+        actionLog.push({id:u.id, time:t, ts:Date.now(), kind:"dispatch", text:"현장 확인 요청 보냄"});
+      } else if (u.real){
+        actionLog.push({id:u.id, time:t, ts:Date.now(), kind:"clean", text:"청소 완료 기록 (실측값은 센서가 다시 보내면 갱신)"});
+      } else {
+        u.fill1 = 5; u.fill2 = 5; u.full1 = false; u.full2 = false;
+        setStatus(u, statusOf(u), Date.now());
+        actionLog.push({id:u.id, time:t, ts:Date.now(), kind:"clean", text:"청소 완료 · 수납함 비움"});
+      }
+      render();
+    }, 600);
+  });
+
+  function setPressed(groupId, btn){
+    document.querySelectorAll("#" + groupId + " button").forEach(function(x){ x.setAttribute("aria-pressed", x === btn ? "true" : "false"); });
+  }
+  document.querySelectorAll("#fStatus button").forEach(function(b){
+    b.addEventListener("click", function(){ filter.st = b.getAttribute("data-f"); setPressed("fStatus", b); renderTable(); });
+  });
+  var dongSel = document.getElementById("fDong");
+  DONGS.slice().sort(function(a,b){ return a.localeCompare(b, "ko"); }).forEach(function(d){
+    var o = document.createElement("option"); o.value = d; o.textContent = d; dongSel.appendChild(o);
+  });
+  dongSel.addEventListener("change", function(){ filter.dong = dongSel.value; renderTable(); });
+  var fSearch = document.getElementById("fSearch");
+  fSearch.addEventListener("input", function(){ filter.q = fSearch.value; renderTable(); });
+  document.querySelectorAll("#pcView .sort").forEach(function(b){
+    b.addEventListener("click", function(){ filter.sort = b.getAttribute("data-sort"); renderTable(); });
+  });
+  document.getElementById("fReset").addEventListener("click", function(){
+    filter = {st:"all", dong:"", q:"", sort:"sev"};
+    dongSel.value = ""; fSearch.value = "";
+    setPressed("fStatus", document.querySelector('#fStatus button[data-f="all"]'));
+    renderTable();
+  });
+
+  var hDev = document.getElementById("hDev");
+  units.forEach(function(u){ var o = document.createElement("option"); o.value = u.id; o.textContent = u.id + " " + u.dong; hDev.appendChild(o); });
+  hDev.addEventListener("change", function(){ hFilter.id = hDev.value; renderHistory(); });
+  document.querySelectorAll("#hKind button").forEach(function(b){
+    b.addEventListener("click", function(){ hFilter.kind = b.getAttribute("data-hk"); setPressed("hKind", b); renderHistory(); });
+  });
+  document.getElementById("hReset").addEventListener("click", function(){
+    hFilter = {kind:"all", id:""}; hDev.value = "";
+    setPressed("hKind", document.querySelector('#hKind button[data-hk="all"]'));
+    renderHistory();
+  });
+  document.getElementById("hTop").addEventListener("click", function(e){
+    var b = e.target.closest("[data-hid]"); if (!b) return;
+    hFilter.id = b.getAttribute("data-hid"); hDev.value = hFilter.id; renderHistory();
+    var s = document.getElementById("logSection");
+    s.scrollIntoView({behavior:"smooth", block:"start"}); s.focus({preventScroll:true});
+  });
+
+  document.getElementById("btnTrigger").addEventListener("click", function(){
+    var u = byId["GA-002"];
+    var t = Date.now();
+    u.target = 9.7; u.level = 9.7; u.tier = "OVERFLOW";
+    u.tier1At = t - 8000; u.riseSeconds = 8;
+    setStatus(u, "crit", t); u.updated = new Date();
+    selectedId = u.id;
+    render();
+  });
+  document.getElementById("btnReset").addEventListener("click", function(){
+    var t = Date.now();
+    units.forEach(function(u){
+      if (u.real) return;
+      u.target = 0.05; u.level = 0.05; u.tier = "NORMAL"; u.riseSeconds = null; u.tier1At = null;
+      if (u.fill1 >= 80) u.fill1 = 20; if (u.fill2 >= 80) u.fill2 = 20;
+      u.full1 = false; u.full2 = false;
+      setStatus(u, statusOf(u), t);
+    });
+    render();
+  });
+
+  document.getElementById("oFull").addEventListener("click", function(){
+    try {
+      if (document.fullscreenElement){ document.exitFullscreen(); return; }
+      var p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      if (p && p.catch) p.catch(function(){});
+    } catch(e){}
+  });
+  setInterval(function(){
+    if (view === "ops") document.getElementById("oClock").textContent = fmtTime(new Date());
+  }, 1000);
+
+  applyView();
+  render();
+  setInterval(function(){ units.forEach(step); render(); }, 4000);
+  pollThingSpeak();
+  setInterval(pollThingSpeak, TS_POLL_MS);
+})();
+</script>
+</body>
+</html>
