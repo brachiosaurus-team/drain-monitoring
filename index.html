@@ -82,7 +82,9 @@
 
   /* 헤더 (p.233) */
   .site-header{background:var(--surface);border-bottom:1px solid var(--border)}
-  .header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:16px}
+  .sticky-top{position:sticky;top:0;z-index:50}
+  .header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;min-height:4rem}
+  .header-left{display:flex;align-items:center;gap:40px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text)}
   .brand svg{width:32px;height:32px;flex:none}
   .brand-name{font-size:1.1875rem;font-weight:700}
@@ -95,14 +97,15 @@
   .mode-btn[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--primary);font-weight:700}
   .mode-btn svg{width:16px;height:16px}
 
-  .main-menu ul{display:flex;gap:32px;list-style:none;margin:0;padding:0}
-  .main-menu a{display:block;padding:12px 0;color:var(--text-2);text-decoration:none;font-weight:700;border-bottom:3px solid transparent}
+  .main-menu ul{display:flex;gap:28px;list-style:none;margin:0;padding:0}
+  .main-menu a{display:block;padding:20px 0 17px;color:var(--text-2);text-decoration:none;font-weight:700;border-bottom:3px solid transparent}
   .main-menu a:hover{color:var(--text)}
   .main-menu a[aria-current="page"]{color:var(--link);border-bottom-color:var(--link)}
 
   /* 긴급 공지 (p.360–367): 본문 첫 요소, 전체 너비, 하나만, 숨기기 버튼 없음, 링크 1개 */
   .critical{background:var(--crit-bg);border-bottom:1px solid var(--crit-border)}
-  .critical .container{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px}
+  .critical .container{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px}
+  #main,section[id],.card[id]{scroll-margin-top:calc(var(--sticky-h, 8rem) + 16px)}
   .ca-label{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--crit-text);white-space:nowrap}
   .ca-label svg{width:20px;height:20px}
   .ca-text{flex:1;min-width:0;font-weight:700}
@@ -297,6 +300,9 @@
     h1{font-size:1.5rem}
     h2{font-size:1.375rem}
     .main-menu ul{gap:24px}
+    .sticky-top{position:static}
+    .header-left{gap:8px 24px}
+    .main-menu a{padding:8px 0 5px}
     .sl-item{grid-template-columns:auto minmax(0,1fr)}
     .sl-dur{grid-column:2;text-align:left}
     .sl-item .btn{grid-column:1/-1;justify-self:start}
@@ -310,13 +316,23 @@
 
 <a class="skip" href="#main" id="skipLink">본문 바로가기</a>
 
+<div class="sticky-top" id="stickyTop">
 <header class="site-header">
   <div class="container header-top">
-    <a class="brand" href="#pc" id="brandLink">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="6" fill="var(--primary)"/><path d="M9 11h14M9 16h14M9 21h14" stroke="var(--btn-text)" stroke-width="2.4" stroke-linecap="round"/></svg>
-      <span class="brand-name">빗물받이 모니터링</span>
-      <span class="demo-tag">개념증명 데모</span>
-    </a>
+    <div class="header-left">
+      <a class="brand" href="#pc" id="brandLink">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="6" fill="var(--primary)"/><path d="M9 11h14M9 16h14M9 21h14" stroke="var(--btn-text)" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <span class="brand-name">빗물받이 모니터링</span>
+        <span class="demo-tag">개념증명 데모</span>
+      </a>
+      <nav class="main-menu" aria-label="주 메뉴">
+        <ul>
+          <li><a href="#pc" id="navPc">모니터링</a></li>
+          <li><a href="#ops" id="navOps">상황실</a></li>
+          <li><a href="#history" id="navHist">이력</a></li>
+        </ul>
+      </nav>
+    </div>
     <ul class="utility" aria-label="화면 설정">
       <li>
         <label for="fontSize">화면 크기</label>
@@ -337,18 +353,7 @@
       </li>
     </ul>
   </div>
-  <nav class="main-menu" aria-label="주 메뉴">
-    <div class="container">
-      <ul>
-        <li><a href="#pc" id="navPc">모니터링</a></li>
-        <li><a href="#ops" id="navOps">상황실</a></li>
-        <li><a href="#history" id="navHist">이력</a></li>
-      </ul>
-    </div>
-  </nav>
 </header>
-
-<main id="main" tabindex="-1">
   <section class="critical" role="banner" aria-label="긴급 공지" id="critical">
     <div class="container">
       <span class="ca-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 19 18H1z" fill="var(--crit-icon)"/><path d="M10 8v4.5" stroke="var(--crit-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="15" r="1.1" fill="var(--crit-bg)"/></svg>긴급</span>
@@ -356,7 +361,9 @@
       <a class="ca-link" href="#pc" id="caLink">조치 필요 목록 보기</a>
     </div>
   </section>
+</div>
 
+<main id="main" tabindex="-1">
   <!-- ===================== 모니터링 (담당자 PC) ===================== -->
   <div class="container view" id="pcView">
     <div class="page-head">
@@ -1272,8 +1279,12 @@
     if (view === "ops") document.getElementById("oClock").textContent = fmtTime(new Date());
   }, 1000);
 
+  function measureSticky(){ document.documentElement.style.setProperty("--sticky-h", document.getElementById("stickyTop").offsetHeight + "px"); }
+  window.addEventListener("resize", measureSticky);
+  fs.addEventListener("change", measureSticky);
   applyView();
   render();
+  measureSticky();
   setInterval(function(){ units.forEach(step); render(); }, 4000);
   pollThingSpeak();
   setInterval(pollThingSpeak, TS_POLL_MS);
