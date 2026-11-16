@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap">
+<!-- 실제 지도: Leaflet + 오픈스트리트맵 (불러오지 못하면 예전 예시 그림 지도로 표시) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   /* 행안부 「디지털 정부서비스 UI/UX 가이드라인」(2025.08) 표준형 스타일 기준.
      구조: 건너뛰기 링크 → 헤더(서비스명 + 유틸리티 + 메인 메뉴) → 긴급 공지 → 본문(모니터링/상황실/이력) → 푸터
@@ -176,6 +179,23 @@
   .map [data-id]{cursor:pointer}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.9375rem;color:var(--text-2);list-style:none;margin:0;padding:0}
   .legend li{display:flex;align-items:center;gap:4px}
+  /* 실제 지도 (Leaflet). 지도 층이 상단 고정 영역 위로 올라오지 않게 z-index:0으로 가둔다 */
+  .map.live,.o-map.live{position:relative;z-index:0}
+  .map.live{height:clamp(320px,34vw,440px)}
+  .o-map.live{min-height:440px}
+  .live .leaflet-container{width:100%;height:100%;background:var(--map);font-family:inherit}
+  /* 지도 바탕은 회색으로 낮춰 상태 색(빨강·노랑)만 눈에 띄게 (60-30-10) */
+  .live .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
+  [data-mode="hc"] .live .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(.9)}
+  .live .dong{stroke:var(--text-3);stroke-width:1.2;fill:var(--primary);fill-opacity:.04}
+  .live .mk{background:none;border:none}
+  .live .mk svg{display:block;overflow:visible}
+  .live .leaflet-tooltip.mk-tip{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:.875rem;padding:2px 8px}
+  .live .leaflet-tooltip.mk-label{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:clamp(.8125rem,1vw,1.0625rem);padding:0 6px}
+  .live .leaflet-tooltip.mk-tip:before,.live .leaflet-tooltip.mk-label:before{display:none}
+  .live .leaflet-control-attribution{font-size:.75rem;background:var(--surface);color:var(--text-2)}
+  .live .leaflet-control-attribution a{color:var(--link)}
+  .live .leaflet-bar a{background:var(--surface);color:var(--text);border-color:var(--border)}
   .ring{animation:ring 1.6s ease-out infinite;transform-origin:center;transform-box:fill-box}
   @keyframes ring{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
 
@@ -390,7 +410,7 @@
       </section>
       <div class="right-col">
         <section class="card" aria-labelledby="hMap">
-          <div class="card-head"><h2 id="hMap">위치</h2><span class="sub">지도 연동 전 · 예시 배치</span></div>
+          <div class="card-head"><h2 id="hMap">위치</h2><span class="sub" id="mapSub">관악구 21개 동 · GA-001만 실제 위치</span></div>
           <div class="map" id="map"></div>
           <ul class="legend">
             <li><span data-icon="good"></span>정상</li>
@@ -653,6 +673,39 @@
     u.since = now0 - (init.mins != null ? init.mins : 60 + Math.floor(seeded() * 300)) * 60000;
     units.push(u);
   }
+  // ---------- 실제 지도용 위치 ----------
+  // 관악구 행정동 경계 (통계청 행정동 경계, vuski/admdongkor ver20261001 가공).
+  // 숫자 = (경도-126.9)*10000, (위도-37.4)*10000 을 번갈아 적은 것. 지도에 맞을 만큼 점을 줄였다.
+  var GWANAK = {"보라매동":[299,940,311,934,391,916,395,909,387,883,389,878,394,881,401,877,393,862,349,864,273,895,243,900,266,941,274,949,285,948],"청림동":[612,926,611,911,621,873,621,852,569,864,580,877,580,885,561,916,573,918,587,929,591,939,602,939,612,934],"행운동":[621,852,613,835,644,802,678,778,688,767,702,766,705,754,673,756,528,813,569,864],"낙성대동":[528,813,623,776,615,762,614,754,634,717,627,698,633,687,645,676,657,643,703,609,694,593,687,590,664,564,657,550,615,556,596,568,577,585,556,621,560,653,535,708,525,711,531,728,525,805,523,814],"중앙동":[563,857,528,814,463,820,469,869],"인헌동":[705,754,716,731,713,698,706,686,657,668,641,678,627,697,634,717,614,754,615,762,623,776,672,756],"남현동":[817,764,819,747,832,716,845,697,869,678,882,655,882,639,875,604,876,594,886,581,824,552,740,476,708,475,687,468,697,479,698,493,657,550,664,564,687,590,694,593,703,609,657,643,645,676,657,668,706,686,713,698,716,731,705,754,769,766],"서원동":[378,841,378,833,356,811,369,796,382,792,395,781,382,773,352,763,302,753,318,787,267,838,342,848],"신원동":[302,753,266,745,230,789,216,831,267,838,318,787],"서림동":[465,727,468,701,454,695,447,700,350,714,341,718,335,731,294,746,294,751,352,763,382,773,395,781,401,773,431,752,436,754],"신사동":[262,838,145,818,133,873,160,888,189,896,198,894,209,890,221,881,233,865],"신림동":[349,864,342,848,262,838,233,865,216,885,209,890,189,896,243,900,273,895],"난향동":[230,635,228,630,241,597,225,573,184,572,148,577,142,581,129,640,137,653,151,662,190,666],"조원동":[145,818,7,793,-5,803,32,850,60,850,133,873],"대학동":[525,711,535,708,556,661,560,653,555,626,577,585,582,578,615,556,657,550,697,495,697,479,687,468,644,456,638,442,641,425,638,408,630,403,600,403,592,392,553,386,526,392,510,384,482,385,449,370,414,374,402,357,386,361,373,385,378,402,354,429,305,453,303,463,303,474,338,499,355,518,384,567,385,575,386,593,376,613,343,650,323,660,314,658,316,672,341,718,364,711,447,700,454,695,468,701,465,727,491,725,510,713],"은천동":[434,921,450,915,461,901,465,878,469,869,463,820,430,823,378,841,342,848,349,864,393,862,401,877,394,881,389,878,387,882,395,909,416,922],"성현동":[561,916,581,882,580,877,563,857,469,869,465,878,461,901,450,915,434,921,474,939,485,937,534,912,540,910],"청룡동":[463,820,523,814,531,733,525,711,510,713,491,725,465,727,436,754,433,751,429,753,401,773,382,792,369,796,357,808,357,814,367,820,378,833,378,841,430,823],"난곡동":[266,745,267,729,260,680,234,656,229,645,230,635,190,666,151,662,143,694,144,701,150,715,178,740,195,746,242,772],"삼성동":[341,718,316,672,314,658,323,660,343,650,376,613,386,593,385,575,384,567,355,518,338,499,310,478,271,517,231,546,226,555,225,573,241,597,228,630,229,644,234,656,260,680,267,729,266,745,294,751,294,746,335,731],"미성동":[242,772,195,746,178,740,150,715,143,694,151,662,137,653,124,657,116,666,82,726,109,738,119,769,116,782,95,782,88,789,88,794,97,810,216,831,230,789]};
+  function dongLatLngs(n){ var a = GWANAK[n], out = []; for (var j = 0; j < a.length; j += 2) out.push([37.4 + a[j + 1] / 1e4, 126.9 + a[j] / 1e4]); return out; }
+  function inPoly(pt, poly){
+    var x = pt[1], y = pt[0], inside = false;
+    for (var a = 0, b = poly.length - 1; a < poly.length; b = a++){
+      var xa = poly[a][1], ya = poly[a][0], xb = poly[b][1], yb = poly[b][0];
+      if ((ya > y) !== (yb > y) && x < (xb - xa) * (y - ya) / (yb - ya) + xa) inside = !inside;
+    }
+    return inside;
+  }
+  // 가상 장치는 자기 동 안의 임의 위치(매번 같은 자리), 서로 120m 이상 떨어지게
+  var REAL_LATLNG = [37.4848, 126.9297];   // GA-001: 신림역 주변 (시연용 위치)
+  (function(){
+    var pr = rng(7310);
+    units.forEach(function(u, idx){
+      if (idx === 0){ u.ll = REAL_LATLNG; return; }
+      var poly = dongLatLngs(u.dong), la0 = 90, la1 = -90, lo0 = 180, lo1 = -180;
+      poly.forEach(function(p){ la0 = Math.min(la0, p[0]); la1 = Math.max(la1, p[0]); lo0 = Math.min(lo0, p[1]); lo1 = Math.max(lo1, p[1]); });
+      var best = null;
+      for (var k = 0; k < 300; k++){
+        var c = [la0 + pr() * (la1 - la0), lo0 + pr() * (lo1 - lo0)];
+        if (!inPoly(c, poly)) continue;
+        best = best || c;
+        var far = units.slice(0, idx).every(function(o){ var dy = (o.ll[0] - c[0]) * 111000, dx = (o.ll[1] - c[1]) * 88000; return dx * dx + dy * dy > 120 * 120; });
+        if (far){ best = c; break; }
+      }
+      u.ll = best || [(la0 + la1) / 2, (lo0 + lo1) / 2];
+    });
+  })();
+
   // GA-001은 시뮬레이션하지 않고 ThingSpeak 값만 쓴다. 첫 값이 오기 전에는 "통신 끊김(대기)"
   (function(u){
     u.everData = false; u.offline = true; u.level = 0; u.tier = "NORMAL"; u.fill1 = 0; u.fill2 = 0;
@@ -939,7 +992,7 @@
     document.getElementById("oCrit").textContent = counts.crit;
     document.getElementById("oWarnBox").classList.toggle("on", counts.warn > 0);
     document.getElementById("oCritBox").classList.toggle("on", counts.crit > 0);
-    document.getElementById("oMap").innerHTML = mapSvg(counts, true);
+    drawMap("oMap", true, counts);
 
     var shown = att.slice(0, 6);
     document.getElementById("oListMeta").textContent = att.length ? att.length + "대" : "";
@@ -1088,6 +1141,89 @@
   }
 
   // ---------- 전체 렌더 ----------
+  // ---------- 실제 지도 (Leaflet) ----------
+  var LIVE = typeof window.L !== "undefined";
+  var maps = {};
+  function markerSvg(u, big, sel){
+    var k = big ? 1.4 : 1, w = Math.round(32 * k), c = w / 2, s = "";
+    if (sel) s += '<circle cx="' + c + '" cy="' + c + '" r="' + (13 * k) + '" fill="none" stroke="var(--link)" stroke-width="2.5"/>';
+    if (u.status === "crit"){
+      var d = 5.5 * k;
+      s += '<circle class="ring" cx="' + c + '" cy="' + c + '" r="' + (12 * k) + '" fill="none" stroke="var(--crit-icon)" stroke-width="2"/>' +
+           '<rect x="' + (c - d) + '" y="' + (c - d) + '" width="' + (2 * d) + '" height="' + (2 * d) + '" transform="rotate(45 ' + c + ' ' + c + ')" fill="var(--crit-icon)" stroke="var(--surface)" stroke-width="1.5"/>';
+    } else if (u.status === "warn"){
+      s += '<polygon points="' + c + ',' + (c - 7.5 * k) + ' ' + (c + 7 * k) + ',' + (c + 5.5 * k) + ' ' + (c - 7 * k) + ',' + (c + 5.5 * k) + '" fill="var(--warn-icon)" stroke="var(--surface)" stroke-width="1.2"/>';
+    } else if (u.status === "off"){
+      s += '<circle cx="' + c + '" cy="' + c + '" r="' + (5.5 * k) + '" fill="var(--surface)" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="3 2"/>';
+    } else {
+      s += '<circle cx="' + c + '" cy="' + c + '" r="' + (4 * k) + '" fill="var(--ok-icon)" stroke="var(--surface)" stroke-width="1.2"/>';
+    }
+    return {html:'<svg width="' + w + '" height="' + w + '" viewBox="0 0 ' + w + ' ' + w + '" aria-hidden="true">' + s + '</svg>', w:w};
+  }
+  function initMap(elId, big){
+    var el = document.getElementById(elId);
+    el.innerHTML = ""; el.classList.add("live");
+    var m = L.map(el, {zoomControl:!big, scrollWheelZoom:false, attributionControl:true, keyboard:true, zoomSnap:0.25});
+    m.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom:19, subdomains:"abc",
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">오픈스트리트맵</a> 기여자 · 행정동 경계: 통계청(vuski/admdongkor)'
+    }).addTo(m);
+    var all = [];
+    Object.keys(GWANAK).forEach(function(n){
+      var ll = dongLatLngs(n); all = all.concat(ll);
+      L.polygon(ll, {className:"dong", interactive:false}).addTo(m);
+    });
+    var st = {map:m, big:big, bounds:L.latLngBounds(all), fitted:false, mk:{}};
+    units.forEach(function(u){
+      var mk = L.marker(u.ll, {icon:L.divIcon({className:"mk", html:"", iconSize:[1, 1]}), keyboard:!big, title:u.id + " " + u.dong, riseOnHover:true}).addTo(m);
+      if (!big) mk.on("click", function(){ select(u.id, false); });
+      st.mk[u.id] = {m:mk, key:""};
+    });
+    return st;
+  }
+  function fitIfNeeded(st){
+    if (!st) return;
+    st.map.invalidateSize();
+    if (!st.fitted && st.map.getSize().x > 0){ st.map.fitBounds(st.bounds, {padding:[12, 12]}); st.fitted = true; }
+  }
+  function updateMap(st){
+    units.forEach(function(u){
+      var sel = !st.big && u.id === selectedId;
+      var key = u.status + (sel ? "*" : "");
+      var o = st.mk[u.id];
+      if (o.key === key) return;
+      o.key = key;
+      var ic = markerSvg(u, st.big, sel);
+      o.m.setIcon(L.divIcon({className:"mk", html:ic.html, iconSize:[ic.w, ic.w], iconAnchor:[ic.w / 2, ic.w / 2]}));
+      o.m.setZIndexOffset((3 - SEV[u.status]) * 1000 + (sel ? 5000 : 0));
+      o.m.unbindTooltip();
+      var tip = u.id + " " + u.dong + " · " + LABEL[u.status] + (u.real ? " (실제 장치)" : "");
+      if (st.big){
+        if (u.status !== "good") o.m.bindTooltip(u.id, {permanent:true, direction:"right", offset:[ic.w / 2 - 4, 0], className:"mk-label"});
+      } else {
+        o.m.bindTooltip(tip, {direction:"top", offset:[0, -ic.w / 2 + 4], className:"mk-tip"});
+      }
+      var iconEl = o.m.getElement();
+      if (iconEl){ iconEl.setAttribute("aria-label", tip); iconEl.setAttribute("title", tip); }
+    });
+  }
+  function drawMap(elId, big, counts){
+    if (!LIVE){ document.getElementById(elId).innerHTML = mapSvg(counts, big); return; }
+    try {
+      if (!maps[elId]) maps[elId] = initMap(elId, big);
+      updateMap(maps[elId]);
+      var hiddenView = document.getElementById(elId).closest("[hidden]");
+      if (!hiddenView) fitIfNeeded(maps[elId]);
+    } catch(e){
+      LIVE = false; console.error(e);
+      document.getElementById(elId).classList.remove("live");
+      document.getElementById(elId).innerHTML = mapSvg(counts, big);
+      document.getElementById("mapSub").textContent = "지도를 불러오지 못해 예시 배치로 표시";
+    }
+  }
+  function refreshMaps(){ Object.keys(maps).forEach(function(k){ if (!document.getElementById(k).closest("[hidden]")) fitIfNeeded(maps[k]); }); }
+
   function render(){
     var counts = {good:0, warn:0, crit:0, off:0};
     units.forEach(function(u){ counts[u.status]++; });
@@ -1098,7 +1234,7 @@
     renderCritical(counts);
     renderTiles(counts);
     renderAttention(att);
-    document.getElementById("map").innerHTML = mapSvg(counts, false);
+    drawMap("map", false, counts);
     renderDetail();
     renderTable();
     renderOps(counts, att);
@@ -1283,9 +1419,13 @@
   function measureSticky(){ document.documentElement.style.setProperty("--sticky-h", document.getElementById("stickyTop").offsetHeight + "px"); }
   window.addEventListener("resize", measureSticky);
   fs.addEventListener("change", measureSticky);
+  fs.addEventListener("change", function(){ setTimeout(refreshMaps, 50); });
+  document.addEventListener("fullscreenchange", function(){ setTimeout(refreshMaps, 100); });
+  window.addEventListener("hashchange", function(){ setTimeout(refreshMaps, 0); });
   applyView();
   render();
   measureSticky();
+  setTimeout(refreshMaps, 0);
   setInterval(function(){ units.forEach(step); render(); }, 4000);
   pollThingSpeak();
   setInterval(pollThingSpeak, TS_POLL_MS);
