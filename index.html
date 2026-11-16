@@ -175,7 +175,7 @@
   .empty{padding:24px 0;text-align:center;color:var(--text-2)}
 
   .map{background:var(--map);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
-  .map svg{display:block;width:100%;height:auto}
+  .map:not(.livemap) svg{display:block;width:100%;height:auto}
   .map [data-id]{cursor:pointer}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.9375rem;color:var(--text-2);list-style:none;margin:0;padding:0}
   .legend li{display:flex;align-items:center;gap:4px}
@@ -284,7 +284,7 @@
   .o-clock{font-size:clamp(1.75rem,2.6vw,3rem);font-weight:700;font-variant-numeric:tabular-nums}
   .o-body{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:24px;min-height:0}
   .o-map{background:var(--map);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  .o-map svg{display:block;width:100%;height:100%}
+  .o-map:not(.livemap) svg{display:block;width:100%;height:100%}
   .o-side{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:8px;min-width:0}
   .o-side h2,.o-events h2{font-size:clamp(1.1875rem,1.4vw,1.75rem)}
   .o-list{list-style:none;margin:0;padding:0}
