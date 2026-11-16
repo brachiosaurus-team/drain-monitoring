@@ -180,22 +180,22 @@
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.9375rem;color:var(--text-2);list-style:none;margin:0;padding:0}
   .legend li{display:flex;align-items:center;gap:4px}
   /* 실제 지도 (Leaflet). 지도 층이 상단 고정 영역 위로 올라오지 않게 z-index:0으로 가둔다 */
-  .map.live,.o-map.live{position:relative;z-index:0}
-  .map.live{height:clamp(320px,34vw,440px)}
-  .o-map.live{min-height:440px}
-  .live .leaflet-container{width:100%;height:100%;background:var(--map);font-family:inherit}
+  .map.livemap,.o-map.livemap{position:relative;z-index:0}
+  .map.livemap{height:clamp(320px,34vw,440px)}
+  .o-map.livemap{min-height:440px}
+  .livemap.leaflet-container{width:100%;height:100%;background:var(--map);font-family:inherit}
   /* 지도 바탕은 회색으로 낮춰 상태 색(빨강·노랑)만 눈에 띄게 (60-30-10) */
-  .live .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
-  [data-mode="hc"] .live .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(.9)}
-  .live .dong{stroke:var(--text-3);stroke-width:1.2;fill:var(--primary);fill-opacity:.04}
-  .live .mk{background:none;border:none}
-  .live .mk svg{display:block;overflow:visible}
-  .live .leaflet-tooltip.mk-tip{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:.875rem;padding:2px 8px}
-  .live .leaflet-tooltip.mk-label{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:clamp(.8125rem,1vw,1.0625rem);padding:0 6px}
-  .live .leaflet-tooltip.mk-tip:before,.live .leaflet-tooltip.mk-label:before{display:none}
-  .live .leaflet-control-attribution{font-size:.75rem;background:var(--surface);color:var(--text-2)}
-  .live .leaflet-control-attribution a{color:var(--link)}
-  .live .leaflet-bar a{background:var(--surface);color:var(--text);border-color:var(--border)}
+  .livemap .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
+  [data-mode="hc"] .livemap .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(.9)}
+  .livemap .dong{stroke:var(--text-3);stroke-width:1.2;fill:var(--primary);fill-opacity:.04}
+  .livemap .mk{background:none;border:none}
+  .livemap .mk svg{display:block;overflow:visible}
+  .livemap .leaflet-tooltip.mk-tip{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:.875rem;padding:2px 8px}
+  .livemap .leaflet-tooltip.mk-label{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:clamp(.8125rem,1vw,1.0625rem);padding:0 6px}
+  .livemap .leaflet-tooltip.mk-tip:before,.livemap .leaflet-tooltip.mk-label:before{display:none}
+  .livemap .leaflet-control-attribution{font-size:.75rem;background:var(--surface);color:var(--text-2)}
+  .livemap .leaflet-control-attribution a{color:var(--link)}
+  .livemap .leaflet-bar a{background:var(--surface);color:var(--text);border-color:var(--border)}
   .ring{animation:ring 1.6s ease-out infinite;transform-origin:center;transform-box:fill-box}
   @keyframes ring{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
 
@@ -1162,7 +1162,7 @@
   }
   function initMap(elId, big){
     var el = document.getElementById(elId);
-    el.innerHTML = ""; el.classList.add("live");
+    el.innerHTML = ""; el.classList.add("livemap");
     var m = L.map(el, {zoomControl:!big, scrollWheelZoom:false, attributionControl:true, keyboard:true, zoomSnap:0.25});
     m.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -1185,7 +1185,7 @@
   function fitIfNeeded(st){
     if (!st) return;
     st.map.invalidateSize();
-    if (!st.fitted && st.map.getSize().x > 0){ st.map.fitBounds(st.bounds, {padding:[12, 12]}); st.fitted = true; }
+    if (!st.fitted && st.map.getSize().x > 150){ st.map.fitBounds(st.bounds, {padding:[12, 12]}); st.fitted = true; }
   }
   function updateMap(st){
     units.forEach(function(u){
@@ -1217,7 +1217,7 @@
       if (!hiddenView) fitIfNeeded(maps[elId]);
     } catch(e){
       LIVE = false; console.error(e);
-      document.getElementById(elId).classList.remove("live");
+      document.getElementById(elId).classList.remove("livemap");
       document.getElementById(elId).innerHTML = mapSvg(counts, big);
       document.getElementById("mapSub").textContent = "지도를 불러오지 못해 예시 배치로 표시";
     }
