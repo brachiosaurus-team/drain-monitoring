@@ -183,11 +183,11 @@
   .map.livemap,.o-map.livemap{position:relative;z-index:0}
   .map.livemap{height:clamp(320px,34vw,440px)}
   .o-map.livemap{min-height:440px}
-  .livemap.leaflet-container{width:100%;height:100%;background:var(--map);font-family:inherit}
+  .livemap.leaflet-container{background:var(--map);font-family:inherit}
   /* 지도 바탕은 회색으로 낮춰 상태 색(빨강·노랑)만 눈에 띄게 (60-30-10) */
   .livemap .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
   [data-mode="hc"] .livemap .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(.9)}
-  .livemap .dong{stroke:var(--text-3);stroke-width:1.2;fill:var(--primary);fill-opacity:.04}
+  .livemap .dong{stroke:var(--text-2);stroke-width:1.5;stroke-opacity:.75;fill:var(--primary);fill-opacity:.03}
   .livemap .mk{background:none;border:none}
   .livemap .mk svg{display:block;overflow:visible}
   .livemap .leaflet-tooltip.mk-tip{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:.875rem;padding:2px 8px}
