@@ -1227,26 +1227,13 @@
       if (!FLOOD[k].length) return;
       floods.push(L.polygon(FLOOD[k].map(decodeRing), {className:"flood f" + k, interactive:false}).addTo(m));
     });
-    var all = [], dongIds = [];
-    Object.keys(GWANAK).forEach(function(n, i){
+    var all = [], dongPolys = [];
+    Object.keys(GWANAK).forEach(function(n){
       var ll = dongLatLngs(n); all = all.concat(ll);
-      var pg = L.polygon(ll, {className:"dong", interactive:false}).addTo(m);
-      var el = pg.getElement && pg.getElement();
-      if (el){ el.id = elId + "-dong" + i; dongIds.push(el.id); }
+      dongPolys.push(L.polygon(ll, {className:"dong", interactive:false}).addTo(m));
     });
-    // 침수 예상 구역은 관악구 경계 안쪽만 보이게 자른다 (동 경계 도형을 그대로 잘라내기 틀로 사용)
-    try {
-      var NS = "http://www.w3.org/2000/svg";
-      var svg = m.getPanes().overlayPane.querySelector("svg");
-      if (svg && dongIds.length){
-        var defs = svg.querySelector("defs") || svg.insertBefore(document.createElementNS(NS, "defs"), svg.firstChild);
-        var cp = document.createElementNS(NS, "clipPath"); cp.id = elId + "-clip";
-        dongIds.forEach(function(id){ var use = document.createElementNS(NS, "use"); use.setAttribute("href", "#" + id); cp.appendChild(use); });
-        defs.appendChild(cp);
-        floods.forEach(function(f){ var fe = f.getElement(); if (fe) fe.setAttribute("clip-path", "url(#" + cp.id + ")"); });
-      }
-    } catch(e){}
-    var st = {map:m, big:big, bounds:L.latLngBounds(all), fitted:false, mk:{}};
+
+    var st = {map:m, big:big, elId:elId, bounds:L.latLngBounds(all), fitted:false, mk:{}, floods:floods, dongPolys:dongPolys, clipped:false};
     units.forEach(function(u){
       var mk = L.marker(u.ll, {icon:L.divIcon({className:"mk", html:"", iconSize:[1, 1]}), keyboard:!big, title:u.id + " " + u.dong, riseOnHover:true}).addTo(m);
       if (!big) mk.on("click", function(){ select(u.id, false); });
@@ -1254,10 +1241,27 @@
     });
     return st;
   }
+  // 침수 예상 구역은 관악구 경계 안쪽만 보이게 자른다.
+  // 지도 도형은 지도가 처음 자리를 잡은 뒤에야 만들어지므로, 그 다음에 적용한다.
+  function applyClip(st){
+    if (st.clipped) return;
+    try {
+      var NS = "http://www.w3.org/2000/svg", ids = [];
+      st.dongPolys.forEach(function(pg, i){ var el = pg.getElement && pg.getElement(); if (el){ el.id = st.elId + "-dong" + i; ids.push(el.id); } });
+      var svg = st.map.getPanes().overlayPane.querySelector("svg");
+      if (!svg || ids.length !== st.dongPolys.length) return;
+      var defs = svg.querySelector("defs") || svg.insertBefore(document.createElementNS(NS, "defs"), svg.firstChild);
+      var cp = document.createElementNS(NS, "clipPath"); cp.id = st.elId + "-clip";
+      ids.forEach(function(id){ var use = document.createElementNS(NS, "use"); use.setAttribute("href", "#" + id); cp.appendChild(use); });
+      defs.appendChild(cp);
+      st.floods.forEach(function(f){ var fe = f.getElement(); if (fe) fe.setAttribute("clip-path", "url(#" + cp.id + ")"); });
+      st.clipped = true;
+    } catch(e){ console.error(e); }
+  }
   function fitIfNeeded(st){
     if (!st) return;
     st.map.invalidateSize();
-    if (!st.fitted && st.map.getSize().x > 150){ st.map.fitBounds(st.bounds, {padding:[12, 12]}); st.fitted = true; }
+    if (!st.fitted && st.map.getSize().x > 150){ st.map.fitBounds(st.bounds, {padding:[12, 12]}); st.fitted = true; applyClip(st); }
   }
   function updateMap(st){
     units.forEach(function(u){
