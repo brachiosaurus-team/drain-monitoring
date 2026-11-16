@@ -46,11 +46,13 @@
 
     --ok-text:#cdd1d5; --ok-bg:#1e2124; --ok-border:#33363d; --ok-icon:#8a949e;
     --off-text:#f4f5f6; --off-bg:#33363d; --off-icon:#b1b8be;
-    /* 주의·위험은 KRDS 선명 모드의 연한 색(warning-20, danger-20) 대신 더 선명한 색을 씀.
-       대비는 가이드라인 기준 유지: 글자 7:1 이상, 아이콘 4.5:1 이상(바탕 #131416 기준) */
-    --warn-text:#ffb114; --warn-bg:#241800; --warn-border:#2e1f00; --warn-icon:#ffb114;
+    /* 주의·위험: KRDS 색상표 안에서 고름(바탕 #131416 기준 대비).
+       주의 = KRDS 선명 모드 토큰 그대로: 아이콘·배지(element.warning) warning-30 #ffb114 10.1:1, 글자(text.warning) warning-20 #ffc95c 12.1:1
+       위험 = 토큰(danger-20 #f7afa1)은 분홍빛으로 흐려 보여 한두 단계 진하게: 아이콘 danger-40 #f05f42 5.6:1(아이콘 기준 4.5:1 이상),
+              글자 danger-30 #f48771 7.5:1(레이블 기준 7:1 이상). KRDS도 선명 모드의 위험 요소·테두리에는 danger-50을 씀 */
+    --warn-text:#ffc95c; --warn-bg:#241800; --warn-border:#2e1f00; --warn-icon:#ffb114;
     --warn-badge-bg:#ffb114; --warn-badge-text:#000000;
-    --crit-text:#ff7a5f; --crit-bg:#260903; --crit-border:#390d05; --crit-icon:#ff4d2e;
+    --crit-text:#f48771; --crit-bg:#260903; --crit-border:#390d05; --crit-icon:#f05f42;
     --info-text:#9ed2fa; --info-bg:#021a2c; --info-border:#03253f; --info-icon:#9ed2fa;
 
     --water:#3d9fb8; --track:#33363d; --map:#1e2124; --mapline:#33363d; --rain:#03253f;
