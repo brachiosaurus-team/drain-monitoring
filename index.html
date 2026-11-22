@@ -192,10 +192,14 @@
   /* 지도 종류 고르기(일반/회색/야간/위성) */
   .livemap .leaflet-control-layers{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:none;font-size:.8125rem;line-height:1.4}
   .livemap .leaflet-control-layers-expanded{padding:4px 10px}
+  .livemap .leaflet-control-layers-list{height:auto!important;max-height:none!important}
+  .livemap .leaflet-control-layers-scrollbar{overflow:visible!important;padding-right:0}
   /* 어두운 바탕(야간·위성)에서는 동 경계·침수 구역을 밝게 */
   .livemap[data-base="night"] .dong,.livemap[data-base="sat"] .dong{stroke:#e6e8ea;stroke-opacity:.85}
   .livemap[data-base="night"] .flood,.livemap[data-base="sat"] .flood{fill:#4fc3f7;stroke:#4fc3f7}
   .livemap .dong.leaflet-interactive{cursor:default}
+  /* 범례의 침수 구역 색도 지도 종류에 맞춤 */
+  .card:has(.livemap[data-base="night"]) .sw-flood,.card:has(.livemap[data-base="sat"]) .sw-flood{background:#4fc3f7}
   .livemap .leaflet-control-layers label{display:flex;align-items:center;gap:6px;margin:2px 0}
   .map-note{font-size:.8125rem;color:var(--text-2)}
   .livemap .dong{stroke:var(--text-2);stroke-width:1.5;stroke-opacity:.75;fill:var(--primary);fill-opacity:.03}
@@ -285,6 +289,13 @@
   /* 상황실 (선명한 화면 모드에서 3~5m 거리 시청 기준) */
   .ops{max-width:none;padding-block:24px 40px;padding-left:max(24px, env(safe-area-inset-left,0px));padding-right:max(24px, env(safe-area-inset-right,0px));display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:24px;min-height:80vh}
   .o-top{display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+  /* 전체 화면(대형 화면 송출): 사이트 메뉴·푸터를 숨기고 긴급 공지 아래를 화면 높이에 딱 맞춤 (스크롤 없음) */
+  html.is-fs .site-header,html.is-fs .site-footer,html.is-fs .skip{display:none}
+  html.is-fs body{overflow:hidden}
+  html.is-fs .ops{height:calc(100vh - var(--crit-h, 56px));min-height:0;padding-block:16px;gap:16px;grid-template-rows:auto minmax(0,1fr) auto}
+  html.is-fs .o-body{min-height:0}
+  html.is-fs .o-map.livemap{min-height:0;height:100%}
+  html.is-fs .o-side{overflow:hidden}
   .o-title h1{font-size:clamp(1.5rem,2.2vw,2.5rem)}
   .o-title p{color:var(--text-2);font-size:clamp(.9375rem,1vw,1.1875rem)}
   .o-counts{list-style:none;margin:0;padding:0;display:flex;gap:16px;flex:1;justify-content:center;flex-wrap:wrap}
@@ -1223,7 +1234,9 @@
            '<path d="M' + c + ' ' + (c - 3.6 * k) + 'v' + (4.6 * k) + '" stroke="#1e2124" stroke-width="' + (1.8 * k) + '" stroke-linecap="round"/>' +
            '<circle cx="' + c + '" cy="' + (c + 3.8 * k) + '" r="' + (1.1 * k) + '" fill="#1e2124"/>';
     } else if (u.status === "off"){
-      s += '<circle cx="' + c + '" cy="' + c + '" r="' + (5.5 * k) + '" fill="var(--surface)" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="3 2"/>';
+      // 통신 끊김: 어떤 바탕 지도에서도 보이게 흰 테두리 + 진한 점선 원
+      s += '<circle cx="' + c + '" cy="' + c + '" r="' + (6.5 * k) + '" fill="#ffffff" stroke="#ffffff" stroke-width="3"/>' +
+           '<circle cx="' + c + '" cy="' + c + '" r="' + (6.5 * k) + '" fill="#ffffff" stroke="#33363d" stroke-width="2.4" stroke-dasharray="3.2 2.2"/>';
     } else {
       s += '<circle cx="' + c + '" cy="' + c + '" r="' + (4 * k) + '" fill="var(--ok-icon)" stroke="var(--surface)" stroke-width="1.2"/>';
     }
@@ -1247,14 +1260,14 @@
     }
     var bases = {
       "일반 지도": vw("Base", "png", 19),
-      "회색 지도": vw("white", "png", 18),   // 브이월드 레이어 이름은 white(백지도)
+      "백지도": vw("white", "png", 18),   // 브이월드 레이어 이름은 white(백지도)
       "야간 지도": vw("midnight", "png", 18),
       "위성 지도": L.layerGroup([vw("Satellite", "jpeg", 19), vw("Hybrid", "png", 19)])
     };
     var saved = null;
     try { saved = localStorage.getItem("baseMap-" + elId); } catch(e){}
-    var first = bases[saved] ? saved : "일반 지도";
-    var BASE_CODE = {"일반 지도":"base", "회색 지도":"white", "야간 지도":"night", "위성 지도":"sat"};
+    var first = bases[saved] ? saved : (elId === "oMap" ? "야간 지도" : "일반 지도");   // 상황실은 야간 지도가 기본
+    var BASE_CODE = {"일반 지도":"base", "백지도":"white", "야간 지도":"night", "위성 지도":"sat"};
     bases[first].addTo(m);
     m.getContainer().setAttribute("data-base", BASE_CODE[first]);
     var ctl = L.control.layers(bases, null, {collapsed:false, position:"topright"}).addTo(m);
@@ -1303,6 +1316,7 @@
       dongPolys.push(pg);
     });
 
+    if (big) m.on("zoomend moveend", function(){ setTimeout(function(){ layoutLabels(maps[elId]); }, 50); });
     var st = {map:m, big:big, elId:elId, bounds:L.latLngBounds(all), fitted:false, mk:{}, floods:floods, dongPolys:dongPolys, clipped:false};
     units.forEach(function(u){
       var mk = L.marker(u.ll, {icon:L.divIcon({className:"mk", html:"", iconSize:[1, 1]}), keyboard:!big, title:u.id + " " + u.dong, riseOnHover:true}).addTo(m);
@@ -1331,7 +1345,14 @@
   function fitIfNeeded(st){
     if (!st) return;
     st.map.invalidateSize();
-    if (!st.fitted && st.map.getSize().x > 150){ st.map.fitBounds(st.bounds, {padding:[12, 12]}); st.fitted = true; applyClip(st); }
+    var sz = st.map.getSize();
+    // 처음이거나, 크기가 크게 바뀌었으면(전체 화면 전환, 창 크기 변경) 관악구에 다시 맞춤
+    var changed = st.lastSize && (Math.abs(sz.x - st.lastSize.x) > 60 || Math.abs(sz.y - st.lastSize.y) > 60);
+    if (sz.x > 150 && (!st.fitted || changed)){
+      st.map.fitBounds(st.bounds, {padding:[12, 12]});
+      st.fitted = true; st.lastSize = sz;
+      applyClip(st);
+    }
   }
   function updateMap(st){
     units.forEach(function(u){
@@ -1345,6 +1366,7 @@
       o.m.setZIndexOffset((3 - SEV[u.status]) * 1000 + (sel ? 5000 : 0));
       o.m.unbindTooltip();
       var tip = u.id + " " + u.dong + " · " + LABEL[u.status] + (u.real ? " (실제 장치)" : "");
+      o.w = ic.w;
       if (st.big){
         if (u.status !== "good") o.m.bindTooltip(u.id, {permanent:true, direction:"right", offset:[ic.w / 2 - 4, 0], className:"mk-label"});
       } else {
@@ -1354,13 +1376,38 @@
       if (iconEl){ iconEl.setAttribute("aria-label", tip); iconEl.setAttribute("title", tip); }
     });
   }
+  // 상황실 지도의 장치 번호표가 서로 겹치면 왼쪽·위·아래로 비켜 놓음
+  function layoutLabels(st){
+    if (!st || !st.big) return;
+    var placed = [], cont = st.map.getContainer().getBoundingClientRect();
+    var list = units.filter(function(u){ return u.status !== "good"; })
+                    .sort(function(a, b){ return SEV[a.status] - SEV[b.status]; });   // 위험 먼저 좋은 자리
+    list.forEach(function(u){
+      var o = st.mk[u.id], tt = o.m.getTooltip && o.m.getTooltip();
+      if (!tt) return;
+      var half = (o.w || 40) / 2 - 4;
+      var tries = [["right",[half,0]],["left",[-half,0]],["right",[half,-18]],["left",[-half,-18]],["right",[half,18]],["left",[-half,18]]];
+      var chosen = tries[0];
+      for (var i = 0; i < tries.length; i++){
+        tt.options.direction = tries[i][0]; tt.options.offset = L.point(tries[i][1]);
+        tt.update();
+        var el = tt.getElement(); if (!el) break;
+        var r = el.getBoundingClientRect();
+        var hit = placed.some(function(p){ return !(r.right < p.left + 2 || r.left > p.right - 2 || r.bottom < p.top + 2 || r.top > p.bottom - 2); });
+        if (!hit){ chosen = tries[i]; break; }
+      }
+      tt.options.direction = chosen[0]; tt.options.offset = L.point(chosen[1]); tt.update();
+      var el2 = tt.getElement(); if (el2) placed.push(el2.getBoundingClientRect());
+    });
+  }
+
   function drawMap(elId, big, counts){
     if (!LIVE){ document.getElementById(elId).innerHTML = mapSvg(counts, big); document.getElementById("lgFlood").hidden = true; return; }
     try {
       if (!maps[elId]) maps[elId] = initMap(elId, big);
       updateMap(maps[elId]);
       var hiddenView = document.getElementById(elId).closest("[hidden]");
-      if (!hiddenView) fitIfNeeded(maps[elId]);
+      if (!hiddenView){ fitIfNeeded(maps[elId]); layoutLabels(maps[elId]); }
     } catch(e){
       LIVE = false; console.error(e);
       document.getElementById(elId).classList.remove("livemap");
@@ -1567,7 +1614,14 @@
   window.addEventListener("resize", measureSticky);
   fs.addEventListener("change", measureSticky);
   fs.addEventListener("change", function(){ setTimeout(refreshMaps, 50); });
-  document.addEventListener("fullscreenchange", function(){ setTimeout(refreshMaps, 100); });
+  document.addEventListener("fullscreenchange", function(){
+    document.documentElement.classList.toggle("is-fs", !!document.fullscreenElement);
+    var cr = document.getElementById("critical");
+    document.documentElement.style.setProperty("--crit-h", (cr && !cr.hidden ? cr.offsetHeight : 0) + "px");
+    setTimeout(refreshMaps, 150); setTimeout(refreshMaps, 600);
+  });
+  var resizeTimer = null;
+  window.addEventListener("resize", function(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(refreshMaps, 250); });
   window.addEventListener("hashchange", function(){ setTimeout(refreshMaps, 0); });
   applyView();
   render();
