@@ -190,8 +190,12 @@
   .o-map.livemap{min-height:440px}
   .livemap.leaflet-container{background:var(--map);font-family:inherit}
   /* 지도 종류 고르기(일반/회색/야간/위성) */
-  .livemap .leaflet-control-layers{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:none;font-size:.9375rem}
-  .livemap .leaflet-control-layers-expanded{padding:6px 12px}
+  .livemap .leaflet-control-layers{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:none;font-size:.8125rem;line-height:1.4}
+  .livemap .leaflet-control-layers-expanded{padding:4px 10px}
+  /* 어두운 바탕(야간·위성)에서는 동 경계·침수 구역을 밝게 */
+  .livemap[data-base="night"] .dong,.livemap[data-base="sat"] .dong{stroke:#e6e8ea;stroke-opacity:.85}
+  .livemap[data-base="night"] .flood,.livemap[data-base="sat"] .flood{fill:#4fc3f7;stroke:#4fc3f7}
+  .livemap .dong.leaflet-interactive{cursor:default}
   .livemap .leaflet-control-layers label{display:flex;align-items:center;gap:6px;margin:2px 0}
   .map-note{font-size:.8125rem;color:var(--text-2)}
   .livemap .dong{stroke:var(--text-2);stroke-width:1.5;stroke-opacity:.75;fill:var(--primary);fill-opacity:.03}
@@ -629,7 +633,7 @@
   // ---------- 브이월드 배경지도 ----------
   // 브이월드(국토교통부) 인증키. "brachiosaurus-team.github.io" 주소에서만 작동하도록 등록된 개발키를 넣으세요.
   // 비워 두거나 키가 작동하지 않으면 오픈스트리트맵으로 자동 전환돼요.
-  var VWORLD_KEY = "C3655FE7-C737-4261-AE14-6447DC34B951";
+  var VWORLD_KEY = "여기에_브이월드_키";
   var TS_CHANNEL_ID = 3570123;
   var TS_READ_KEY = "";          // 채널이 비공개면 Read API Key를 넣기 (공개 채널이면 비워둠)
   var TS_POLL_MS = 15000;        // 15초마다 새 값 확인
@@ -1207,7 +1211,8 @@
   var maps = {};
   function markerSvg(u, big, sel){
     var k = big ? 1.4 : 1, w = Math.round(32 * k), c = w / 2, s = "";
-    if (sel) s += '<circle cx="' + c + '" cy="' + c + '" r="' + (13 * k) + '" fill="none" stroke="var(--link)" stroke-width="2.5"/>';
+    if (sel) s += '<circle cx="' + c + '" cy="' + c + '" r="' + (13 * k) + '" fill="none" stroke="#ffffff" stroke-width="5" stroke-opacity=".85"/>' +   // 어두운 지도에서도 보이게 흰 테두리
+                  '<circle cx="' + c + '" cy="' + c + '" r="' + (13 * k) + '" fill="none" stroke="var(--link)" stroke-width="2.5"/>';
     if (u.status === "crit"){
       var d = 5.5 * k;
       s += '<circle class="ring" cx="' + c + '" cy="' + c + '" r="' + (12 * k) + '" fill="none" stroke="var(--crit-icon)" stroke-width="2"/>' +
@@ -1242,16 +1247,21 @@
     }
     var bases = {
       "일반 지도": vw("Base", "png", 19),
-      "회색 지도": vw("gray", "png", 18),
+      "회색 지도": vw("white", "png", 18),   // 브이월드 레이어 이름은 white(백지도)
       "야간 지도": vw("midnight", "png", 18),
       "위성 지도": L.layerGroup([vw("Satellite", "jpeg", 19), vw("Hybrid", "png", 19)])
     };
     var saved = null;
     try { saved = localStorage.getItem("baseMap-" + elId); } catch(e){}
     var first = bases[saved] ? saved : "일반 지도";
+    var BASE_CODE = {"일반 지도":"base", "회색 지도":"white", "야간 지도":"night", "위성 지도":"sat"};
     bases[first].addTo(m);
+    m.getContainer().setAttribute("data-base", BASE_CODE[first]);
     var ctl = L.control.layers(bases, null, {collapsed:false, position:"topright"}).addTo(m);
-    m.on("baselayerchange", function(e){ try { localStorage.setItem("baseMap-" + elId, e.name); } catch(err){} });
+    m.on("baselayerchange", function(e){
+      m.getContainer().setAttribute("data-base", BASE_CODE[e.name] || "base");
+      try { localStorage.setItem("baseMap-" + elId, e.name); } catch(err){}
+    });
     // 키가 등록 주소와 다르거나 만료되면 타일이 계속 실패 → 오픈스트리트맵으로 바꾸고 안내
     var ok = 0, bad = 0, switched = false;
     Object.keys(bases).forEach(function(k){
@@ -1276,6 +1286,8 @@
     var el = document.getElementById(elId);
     el.innerHTML = ""; el.classList.add("livemap");
     var m = L.map(el, {zoomControl:!big, scrollWheelZoom:false, attributionControl:true, keyboard:true, zoomSnap:0.25});
+    // 처음부터 관악구 중심으로 화면을 잡아 둠: 창이 안 보이는 상태로 열려도 지도가 빈 채로 남지 않게
+    m.setView([37.468, 126.945], 12);
     m.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     addBaseMaps(m, elId);
     var floods = [];
@@ -1286,7 +1298,9 @@
     var all = [], dongPolys = [];
     Object.keys(GWANAK).forEach(function(n){
       var ll = dongLatLngs(n); all = all.concat(ll);
-      dongPolys.push(L.polygon(ll, {className:"dong", interactive:false}).addTo(m));
+      var pg = L.polygon(ll, {className:"dong", interactive:!big}).addTo(m);
+      if (!big) pg.bindTooltip(n, {sticky:true, direction:"top", className:"mk-tip"});   // 동 위에 마우스를 올리면 동 이름
+      dongPolys.push(pg);
     });
 
     var st = {map:m, big:big, elId:elId, bounds:L.latLngBounds(all), fitted:false, mk:{}, floods:floods, dongPolys:dongPolys, clipped:false};
