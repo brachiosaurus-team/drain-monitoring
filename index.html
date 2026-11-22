@@ -189,9 +189,11 @@
   .map.livemap{height:clamp(320px,34vw,440px)}
   .o-map.livemap{min-height:440px}
   .livemap.leaflet-container{background:var(--map);font-family:inherit}
-  /* 지도 바탕은 회색으로 낮춰 상태 색(빨강·노랑)만 눈에 띄게 (60-30-10) */
-  .livemap .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
-  [data-mode="hc"] .livemap .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(.9)}
+  /* 지도 종류 고르기(일반/회색/야간/위성) */
+  .livemap .leaflet-control-layers{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:none;font-size:.9375rem}
+  .livemap .leaflet-control-layers-expanded{padding:6px 12px}
+  .livemap .leaflet-control-layers label{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .map-note{font-size:.8125rem;color:var(--text-2)}
   .livemap .dong{stroke:var(--text-2);stroke-width:1.5;stroke-opacity:.75;fill:var(--primary);fill-opacity:.03}
   .livemap .flood{stroke:var(--water);stroke-width:.8;stroke-opacity:.8;fill:var(--water)}
   .livemap .f1{fill-opacity:.38} .livemap .f2{fill-opacity:.55} .livemap .f3{fill-opacity:.7} .livemap .f4{fill-opacity:.82} .livemap .f5{fill-opacity:.9}
@@ -624,6 +626,10 @@
   var REAL_UNIT_ID = "GA-001";
 
   // ---------- ThingSpeak (GA-001 실측값) ----------
+  // ---------- 브이월드 배경지도 ----------
+  // 브이월드(국토교통부) 인증키. "brachiosaurus-team.github.io" 주소에서만 작동하도록 등록된 개발키를 넣으세요.
+  // 비워 두거나 키가 작동하지 않으면 오픈스트리트맵으로 자동 전환돼요.
+  var VWORLD_KEY = "C3655FE7-C737-4261-AE14-6447DC34B951";
   var TS_CHANNEL_ID = 3570123;
   var TS_READ_KEY = "";          // 채널이 비공개면 Read API Key를 넣기 (공개 채널이면 비워둠)
   var TS_POLL_MS = 15000;        // 15초마다 새 값 확인
@@ -1218,15 +1224,60 @@
     }
     return {html:'<svg width="' + w + '" height="' + w + '" viewBox="0 0 ' + w + ' ' + w + '" aria-hidden="true">' + s + '</svg>', w:w};
   }
+  // 바탕 지도: 브이월드(일반/회색/야간/위성) + 지도 종류 고르기. 키가 없거나 안 되면 오픈스트리트맵(색 있는 지도)
+  var DATA_CREDIT = '행정동 경계: 통계청(vuski/admdongkor) · 침수예상도·침수흔적도: 서울시';
+  function osmLayer(){
+    return L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom:19, subdomains:"abc",
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · ' + DATA_CREDIT
+    });
+  }
+  function addBaseMaps(m, elId){
+    var hasKey = VWORLD_KEY && VWORLD_KEY.indexOf("여기에") !== 0;
+    if (!hasKey){ osmLayer().addTo(m); return; }
+    var credit = '&copy; <a href="https://www.vworld.kr">국토교통부 브이월드</a> · ' + DATA_CREDIT;
+    function vw(layer, ext, maxN){
+      return L.tileLayer("https://api.vworld.kr/req/wmts/1.0.0/" + VWORLD_KEY + "/" + layer + "/{z}/{y}/{x}." + ext,
+        {minZoom:6, maxZoom:19, maxNativeZoom:maxN, attribution:credit});
+    }
+    var bases = {
+      "일반 지도": vw("Base", "png", 19),
+      "회색 지도": vw("gray", "png", 18),
+      "야간 지도": vw("midnight", "png", 18),
+      "위성 지도": L.layerGroup([vw("Satellite", "jpeg", 19), vw("Hybrid", "png", 19)])
+    };
+    var saved = null;
+    try { saved = localStorage.getItem("baseMap-" + elId); } catch(e){}
+    var first = bases[saved] ? saved : "일반 지도";
+    bases[first].addTo(m);
+    var ctl = L.control.layers(bases, null, {collapsed:false, position:"topright"}).addTo(m);
+    m.on("baselayerchange", function(e){ try { localStorage.setItem("baseMap-" + elId, e.name); } catch(err){} });
+    // 키가 등록 주소와 다르거나 만료되면 타일이 계속 실패 → 오픈스트리트맵으로 바꾸고 안내
+    var ok = 0, bad = 0, switched = false;
+    Object.keys(bases).forEach(function(k){
+      var layers = bases[k].getLayers ? bases[k].getLayers() : [bases[k]];
+      layers.forEach(function(l){
+        l.on("tileload", function(){ ok++; });
+        l.on("tileerror", function(){
+          bad++;
+          if (!switched && ok === 0 && bad >= 6){
+            switched = true;
+            Object.keys(bases).forEach(function(n){ m.removeLayer(bases[n]); });
+            m.removeControl(ctl);
+            osmLayer().addTo(m);
+            console.warn("브이월드 지도를 불러오지 못해 오픈스트리트맵으로 바꿨어요. 인증키와 등록 주소를 확인하세요.");
+          }
+        });
+      });
+    });
+  }
+
   function initMap(elId, big){
     var el = document.getElementById(elId);
     el.innerHTML = ""; el.classList.add("livemap");
     var m = L.map(el, {zoomControl:!big, scrollWheelZoom:false, attributionControl:true, keyboard:true, zoomSnap:0.25});
     m.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom:19, subdomains:"abc",
-      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">오픈스트리트맵</a> 기여자 · 행정동 경계: 통계청(vuski/admdongkor) · 침수예상도·침수흔적도: 서울시'
-    }).addTo(m);
+    addBaseMaps(m, elId);
     var floods = [];
     Object.keys(FLOOD).forEach(function(k){
       if (!FLOOD[k].length) return;
