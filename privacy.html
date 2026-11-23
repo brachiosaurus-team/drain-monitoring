@@ -4,38 +4,152 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>개인정보 처리 안내 · 빗물받이 모니터링</title>
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap">
 <style>
-  :root{--fg:#1e2124;--muted:#555;--line:#d6d6d6;--bg:#fff;--accent:#256ef4}
-  @media (prefers-color-scheme: dark){:root{--fg:#e8e8e8;--muted:#aaa;--line:#444;--bg:#131416;--accent:#7aa7ff}}
-  body{margin:0;background:var(--bg);color:var(--fg);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.7}
-  main{max-width:720px;margin:0 auto;padding:32px 16px 64px}
-  h1{font-size:1.5rem;margin:0 0 4px}
-  h2{font-size:1.1rem;margin:28px 0 8px;padding-top:16px;border-top:1px solid var(--line)}
-  p,li{font-size:1rem}
-  .muted{color:var(--muted);font-size:.9rem}
-  a{color:var(--accent)}
+  :root{
+    --font:"Pretendard GOV","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --bg:#f4f5f6; --surface:#fff; --text:#1e2124; --text-2:#464c53; --text-3:#6d7882;
+    --line:#e6e8ea; --border:#cdd1d5;
+    --primary:#256ef4; --primary-hover:#0b50d0; --primary-soft:#ecf2fe; --link:#0b50d0; --btn-text:#fff;
+    --ok-soft:#eaf6ec; --ok-ink:#1f7a3a; --no-soft:#fdefec; --no-ink:#bd2c0f;
+    --shadow:0 1px 2px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#000; --surface:#131416; --text:#f4f5f6; --text-2:#cdd1d5; --text-3:#b1b8be;
+      --line:#33363d; --border:#58616a;
+      --primary:#86aff9; --primary-hover:#b1cefb; --primary-soft:#03163a; --link:#86aff9; --btn-text:#000;
+      --ok-soft:#0c2414; --ok-ink:#8fd6a3; --no-soft:#260903; --no-ink:#f48771; --shadow:none;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#000; --surface:#131416; --text:#f4f5f6; --text-2:#cdd1d5; --text-3:#b1b8be;
+    --line:#33363d; --border:#58616a;
+    --primary:#86aff9; --primary-hover:#b1cefb; --primary-soft:#03163a; --link:#86aff9; --btn-text:#000;
+    --ok-soft:#0c2414; --ok-ink:#8fd6a3; --no-soft:#260903; --no-ink:#f48771; --shadow:none;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:1.0625rem;line-height:1.6}
+  a{color:var(--link)}
+  .wrap{max-width:880px;margin:0 auto;padding:0 16px}
+
+  header{background:var(--surface);border-bottom:1px solid var(--border)}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;flex-wrap:wrap;padding-block:8px}
+  .brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-weight:700;font-size:1.125rem}
+  .brand svg{width:32px;height:32px;flex:none}
+  .tag{font-size:.8125rem;font-weight:400;color:var(--text-2);border:1px solid var(--border);border-radius:4px;padding:0 8px;line-height:1.6}
+  .btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:6px;border:1px solid var(--primary);
+       background:var(--primary);color:var(--btn-text);font-weight:700;font-size:1rem;text-decoration:none}
+  .btn:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+  .btn.ghost{background:transparent;color:var(--link)}
+  .btn.ghost:hover{background:var(--primary-soft)}
+  @media (max-width:520px){header .btn.ghost{display:none}}
+
+  .hero{padding:40px 0 24px}
+  .hero h1{margin:0 0 8px;font-size:1.75rem;line-height:1.35}
+  .hero p{margin:0;color:var(--text-2);max-width:640px}
+  .meta{margin-top:12px!important;font-size:.875rem;color:var(--text-3)!important}
+
+  .glance{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 32px}
+  @media (max-width:760px){.glance{grid-template-columns:repeat(2,1fr)}}
+  .g{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:var(--shadow)}
+  .g .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--primary-soft);margin-bottom:10px}
+  .g .ic svg{width:22px;height:22px}
+  .g.no .ic{background:var(--no-soft)}
+  .g.ok .ic{background:var(--ok-soft)}
+  .g small{display:block;font-size:.8125rem;color:var(--text-3);font-weight:700;letter-spacing:.02em}
+  .g b{display:block;font-size:1.0625rem;margin-top:2px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px;box-shadow:var(--shadow);margin-bottom:16px}
+  .card h2{margin:0 0 12px;font-size:1.1875rem;display:flex;align-items:center;gap:10px}
+  .card h2 .n{width:28px;height:28px;border-radius:50%;background:var(--primary);color:var(--btn-text);display:grid;place-items:center;font-size:.875rem;flex:none}
+  .card p{margin:0 0 8px;color:var(--text-2)}
+  .card p:last-child{margin-bottom:0}
+
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 4px;padding:0;list-style:none}
+  .flow li{background:var(--primary-soft);color:var(--text);border-radius:6px;padding:6px 12px;font-size:.9375rem;font-weight:700}
+  .flow .ar{background:none;padding:0;color:var(--text-3);font-weight:400}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:.875rem;padding:2px 10px;border-radius:4px;font-weight:700}
+  .chip.ok{background:var(--ok-soft);color:var(--ok-ink)}
+  .chip.no{background:var(--no-soft);color:var(--no-ink)}
+
+  .end{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:24px 0 48px}
+  footer{border-top:1px solid var(--border);background:var(--surface);color:var(--text-3);font-size:.875rem;padding:20px 0}
 </style>
 </head>
 <body>
-<main>
-  <h1>개인정보 처리 안내</h1>
-  <p class="muted">빗물받이 모니터링 (이화여자대학교 캡스톤디자인 브라키오사우르스 조) · 시행일 2026년 11월 23일</p>
 
-  <p>이 사이트는 졸업 프로젝트로 만든 시연용 모니터링 화면입니다. 조치 기록을 남길 때 Google 계정으로 로그인하며, 이때 필요한 최소한의 정보만 받습니다.</p>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="6" fill="var(--primary)"/><path d="M9 11h14M9 16h14M9 21h14" stroke="var(--btn-text)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      빗물받이 모니터링 <span class="tag">개념증명 데모</span>
+    </a>
+    <a class="btn ghost" href="./">모니터링 화면으로</a>
+  </div>
+</header>
 
-  <h2>받는 정보</h2>
-  <p>Google 로그인 시 계정 이메일 주소와 이름만 받습니다. 비밀번호는 Google이 처리하며 이 사이트는 받지 않습니다.</p>
+<main class="wrap">
+  <section class="hero">
+    <h1>개인정보 처리 안내</h1>
+    <p>모니터링 화면은 로그인 없이 볼 수 있어요. 출동 요청이나 조치 기록을 남길 때만 학교 Google 계정으로 로그인하고, 그때 필요한 정보만 받아요.</p>
+    <p class="meta">이화여자대학교 캡스톤디자인 브라키오사우르스 조 · 2026년 11월 23일부터</p>
+  </section>
 
-  <h2>쓰는 목적</h2>
-  <p>학교 계정(@ewha.ac.kr, @ewhain.net)인지 확인해 기록 권한을 주는 데 쓰고, 출동 요청·출발·조치 결과 기록에 누가 남겼는지 표시하는 데 씁니다. 그 밖의 목적으로 쓰거나 다른 곳에 제공하지 않습니다.</p>
+  <section class="glance" aria-label="한눈에 보기">
+    <div class="g ok">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ok-ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+      <small>받는 정보</small><b>이메일 · 이름</b>
+    </div>
+    <div class="g no">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--no-ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M4 4l16 16"/></svg></div>
+      <small>받지 않는 정보</small><b>비밀번호</b>
+    </div>
+    <div class="g">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg></div>
+      <small>쓰는 곳</small><b>기록 작성자 표시</b>
+    </div>
+    <div class="g">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <small>보관 기간</small><b>최종 발표 후 삭제</b>
+    </div>
+  </section>
 
-  <h2>보관 장소와 기간</h2>
-  <p>기록은 팀이 관리하는 Google 스프레드시트에 이메일·이름과 함께 저장됩니다. 프로젝트가 끝나면(최종 발표 후) 기록을 삭제합니다. 로그인 정보는 브라우저 세션 동안만 기기에 남고, 창을 닫으면 사라집니다.</p>
+  <section class="card">
+    <h2><span class="n">1</span>받는 정보</h2>
+    <p>Google 로그인으로 계정 이메일 주소와 이름만 받아요. 비밀번호는 Google 화면에서만 입력하고, 이 사이트로는 오지 않아요.</p>
+    <div class="chips"><span class="chip ok">이메일</span><span class="chip ok">이름</span><span class="chip no">비밀번호 받지 않음</span><span class="chip no">위치 받지 않음</span></div>
+  </section>
 
-  <h2>문의와 삭제 요청</h2>
-  <p>본인 기록의 확인이나 삭제를 원하시면 브라키오사우르스 조에 연락해 주세요. 요청을 받으면 해당 기록을 지웁니다.</p>
+  <section class="card">
+    <h2><span class="n">2</span>쓰는 목적</h2>
+    <p>학교 계정(@ewha.ac.kr, @ewhain.net)인지 확인하고, 기록마다 누가 남겼는지 보여 주는 데만 써요. 다른 목적으로 쓰거나 다른 곳에 넘기지 않아요.</p>
+    <ol class="flow" aria-label="기록이 남는 단계">
+      <li>출동 요청</li><li class="ar" aria-hidden="true">→</li>
+      <li>출발</li><li class="ar" aria-hidden="true">→</li>
+      <li>조치 결과 기록</li>
+    </ol>
+  </section>
 
-  <p class="muted"><a href="./">모니터링 화면으로 돌아가기</a></p>
+  <section class="card">
+    <h2><span class="n">3</span>보관 장소와 기간</h2>
+    <p>기록은 팀이 관리하는 Google 스프레드시트에 이메일·이름과 함께 저장되고, 최종 발표가 끝나면 지워요.</p>
+    <p>로그인 상태는 브라우저 창을 열어 둔 동안만 기기에 남고, 창을 닫으면 사라져요.</p>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">4</span>확인·삭제 요청</h2>
+    <p>내 기록을 확인하거나 지우고 싶으면 브라키오사우르스 조에 말씀해 주세요. 요청을 받으면 바로 지워요.</p>
+  </section>
+
+  <div class="end"><a class="btn" href="./">모니터링 화면으로 돌아가기</a></div>
 </main>
+
+<footer><div class="wrap">빗물받이 모니터링 · 졸업 캡스톤디자인 개념증명 데모이며 실제 관악구청 서비스가 아닙니다.</div></footer>
 </body>
 </html>

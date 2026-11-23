@@ -102,7 +102,9 @@
   .brand svg{width:32px;height:32px;flex:none}
   .brand-name{font-size:1.1875rem;font-weight:700}
   .demo-tag{font-size:.8125rem;color:var(--text-2);border:1px solid var(--border);border-radius:4px;padding:0 8px;line-height:1.6}
-  .utility{display:flex;align-items:center;gap:16px;list-style:none;margin:8px 0;padding:0;font-size:.9375rem}
+  .utility{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;list-style:none;margin:8px 0;padding:0;font-size:.9375rem}
+  .utility label,.mode-btn{white-space:nowrap}
+  @media (max-width:480px){ .utility .divider{display:none} .critical .ca-text{flex-basis:100%;order:2;word-break:keep-all} .critical .ca-link{order:3} }
   .utility li{display:flex;align-items:center;gap:8px}
   .utility .divider{width:1px;height:16px;background:var(--border)}
   .utility select{padding:4px 8px;border:1px solid var(--border-input);border-radius:6px;background:var(--surface)}
@@ -385,6 +387,13 @@
   .rec-err{color:var(--crit-text);font-weight:700;margin:0}
   .dsp-line{margin:0;align-self:center;padding:8px 12px;border-radius:6px;background:var(--primary-soft);color:var(--link);font-weight:700;font-size:.9375rem}
   .f-btns .wide{grid-column:1/-1}
+  .login-box{display:flex;flex-direction:column;gap:16px;padding:24px}
+  .login-box h2{margin:0;font-size:1.375rem}
+  .login-box p{margin:0}
+  .gsi-btn{min-height:44px}
+  .srv:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--off-icon);vertical-align:middle}
+  .srv.good:before{background:#228738}
+  .srv.bad{color:var(--crit-text);font-weight:700} .srv.bad:before{background:var(--crit-icon)}
   .rec-note{font-size:.875rem;color:var(--text-2);margin:0}
   .rec-btns{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:-24px;margin:0 -24px -24px;padding:12px 24px 24px;background:var(--surface);border-top:1px solid var(--line)}   /* 휴대폰에서 창이 길어도 버튼은 항상 보이게 */
   .rec-btns .btn{min-height:48px;padding:0 20px;font-size:1rem}
@@ -455,6 +464,9 @@
           <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>
           선명한 화면 모드
         </button>
+      </li>
+      <li class="auth-li" id="authLi" hidden>
+        <button type="button" class="mode-btn" id="authBtn">학교 계정 로그인</button>
       </li>
     </ul>
   </div>
@@ -679,6 +691,8 @@
     <div class="page-head">
       <h1>현장 조치</h1>
       <p class="meta">관악구 · 현장 담당자 화면 · <time id="fClock" class="num">--:--</time> 기준</p>
+      <p class="f-meta srv" id="fServer" role="status"></p>
+      <p id="fLoginP" hidden><button type="button" class="btn primary" id="fLogin">학교 계정으로 로그인</button></p>
     </div>
     <div class="f-tabs" role="group" aria-label="목록 고르기" id="fTabs">
       <button type="button" data-tab="need" aria-pressed="true">조치 필요</button>
@@ -690,6 +704,16 @@
   </div>
 </main>
 
+<dialog class="rec-dlg" id="loginDlg" aria-labelledby="loginH">
+  <div class="login-box">
+    <h2 id="loginH">학교 계정으로 로그인</h2>
+    <p>공유 기록을 보고 출동 요청·조치 기록을 남기려면 <b>이화여대 학교 메일(@ewha.ac.kr 또는 @ewhain.net) Google 계정</b>으로 로그인해 주세요. 따로 회원가입은 없어요.</p>
+    <div id="gsiBtn" class="gsi-btn"></div>
+    <p class="rec-err" id="loginErr" role="alert" hidden></p>
+    <p class="rec-note">학교 밖 계정은 들어올 수 없어요. 기록에는 로그인한 이름이 함께 남고, 이메일은 팀 관리용 시트에만 저장돼요. 비밀번호는 이 사이트가 아니라 구글에서만 입력해요. <a href="privacy.html" target="_blank" rel="noopener">개인정보 처리 안내 보기</a></p>
+    <div class="rec-btns"><button type="button" class="btn" id="loginClose">닫기</button></div>
+  </div>
+</dialog>
 <dialog class="rec-dlg" id="dspDlg" aria-labelledby="dspH">
   <form id="dspForm" novalidate>
     <h2 id="dspH">현장 출동 요청</h2>
@@ -719,7 +743,7 @@
     </fieldset>
     <p class="rec-err" id="recErr" hidden>한 일을 하나 이상 골라 주세요.</p>
     <div><label class="fl" for="recMemo">메모 (선택)</label><textarea id="recMemo" rows="3" maxlength="200" placeholder="예) 낙엽이 많아 수납함 2개 모두 비움"></textarea></div>
-    <div><label class="fl" for="recWho">담당자 (선택)</label><input type="text" id="recWho" maxlength="20" autocomplete="name" placeholder="예) 김현장"></div>
+    <div><label class="fl" for="recWho">담당자 (선택)</label><input type="text" id="recWho" maxlength="20" autocomplete="off" placeholder="예) 기동반 1조" aria-describedby="recWhoHelp"><p class="rec-note" id="recWhoHelp">기록은 로그인한 학교 계정 사용자만 볼 수 있고, 로그인한 이름이 함께 남아요. 담당자 칸에는 조·역할 이름을 적어 주세요.</p></div>
     <p class="rec-note">기록하면 바로 "정상"이 되지 않고 <b>조치 확인 대기</b>로 바뀝니다. 센서가 다음 값을 보내 정상으로 확인되면 정상으로 돌아가고, 여전히 이상하면 다시 알립니다.</p>
     <div class="rec-btns"><button type="button" class="btn" id="recCancel">취소</button><button type="submit" class="btn primary" id="recOk">기록하기</button></div>
   </form>
@@ -731,6 +755,7 @@
     <strong>빗물받이 모니터링</strong>
     <p>졸업 캡스톤디자인 개념증명 데모입니다. 실제 관악구청 서비스가 아니며, GA-001을 뺀 장치 49대와 지난 기록은 가상 데이터입니다.</p>
     <p>데이터: GA-001 실측값(ThingSpeak 채널 3570123) · 디자인 기준: 디지털 정부서비스 UI/UX 가이드라인(2025.08)</p>
+    <p><a href="privacy.html">개인정보 처리 안내</a></p>
   </div>
 </footer>
 
@@ -764,6 +789,14 @@
   // 브이월드(국토교통부) 인증키. "brachiosaurus-team.github.io" 주소에서만 작동하도록 등록된 개발키를 넣으세요.
   // 비워 두거나 키가 작동하지 않으면 오픈스트리트맵으로 자동 전환돼요.
   var VWORLD_KEY = "C3655FE7-C737-4261-AE14-6447DC34B951";
+  // ---------- 공유 기록 서버 (Google Apps Script 웹앱) ----------
+  // 배포한 웹앱 주소(https://script.google.com/macros/s/…/exec)를 넣으면 출동 요청·조치 기록이 모든 화면에 함께 보여요.
+  // 비워 두면 지금처럼 각 기기(브라우저)에만 저장돼요.
+  var SERVER_URL = "여기에_웹앱_주소";
+  // 학교 계정 로그인(Google로 로그인): 구글 클라우드 콘솔에서 만든 OAuth 클라이언트 ID. 서버(Code.gs)와 같은 값.
+  // 공유 서버를 쓰려면 반드시 필요해요. 학교 계정(@ewha.ac.kr, @ewhain.net)인지는 서버가 확인해요.
+  var GOOGLE_CLIENT_ID = "여기에_클라이언트_ID";
+  var GSI_SRC = "https://accounts.google.com/gsi/client";
   var TS_CHANNEL_ID = 3570123;
   var TS_READ_KEY = "";          // 채널이 비공개면 Read API Key를 넣기 (공개 채널이면 비워둠)
   var TS_POLL_MS = 15000;        // 15초마다 새 값 확인
@@ -926,8 +959,16 @@
     if (u.tier === "TIER1" || u.fill1 >= 80 || u.fill2 >= 80) return "warn";
     return "good";
   }
+  // 경보 기준 상태: "조치 확인 대기" 중이라도 센서가 아직 위험·주의·통신 끊김이면 그 상태로 센다(기록만으로 경보가 가려지지 않게)
+  function alertSt(u){ return u.verify ? baseStatus(u) : u.status; }
   function reasonOf(u){
-    if (u.verify) return "조치 기록됨 · 센서 확인 중";
+    if (u.verify){
+      var b = baseStatus(u);
+      return "조치 기록됨 · 센서 확인 중" + (b !== "good" ? " (센서는 아직 " + LABEL[b] + (sensorReason(u) ? ": " + sensorReason(u) : "") + ")" : "");
+    }
+    return sensorReason(u);
+  }
+  function sensorReason(u){
     if (u.real && u.offline) return u.everData ? "1분 넘게 새 값 없음" : "실측값 대기 중";
     if (u.tier === "OVERFLOW") return "마지노선 수위 · 입구 차단";
     if (u.full1 && u.full2) return "수납함 1·2 가득 참";
@@ -1055,7 +1096,7 @@
   // ---------- 모니터링 화면 ----------
   function attentionList(){
     return units.filter(function(u){ return u.status !== "good"; })
-      .sort(function(a,b){ return (SEV[a.status] - SEV[b.status]) || (a.since - b.since); });
+      .sort(function(a,b){ return (SEV[alertSt(a)] - SEV[alertSt(b)]) || (SEV[a.status] - SEV[b.status]) || (a.since - b.since); });
   }
 
   function renderTiles(counts){
@@ -1135,7 +1176,7 @@
         (full ? '<span class="full-flag">가득 참 · 입구 차단</span>' : '') + '</div>';
     }
     var logs = actionLog.filter(function(l){ return l.id === u.id; })
-      .concat(records.filter(function(r){ return r.id === u.id; }).map(function(r){ return {ts:r.ts, time:fmtTime(new Date(r.ts)), text:recordText(r)}; }))
+      .concat(records.filter(function(r){ return r.id === u.id; }).map(function(r){ return {ts:r.ts, time:fmtTime(new Date(r.ts)), html:recordText(r)}; }))
       .sort(function(a, b){ return a.ts - b.ts; }).slice(-3).reverse();
     el.innerHTML =
       '<div class="detail-top"><div><h2 id="hDetail">' + esc(u.dong) + ' <span class="num">' + u.id + '</span></h2>' +
@@ -1158,7 +1199,7 @@
         (u.verify ? '<button type="button" class="btn secondary" disabled aria-disabled="true">센서 확인 중</button>'
                   : '<button type="button" class="btn secondary" data-act="record">조치 결과 기록</button>') +
       '</div>' +
-      '<ul class="log">' + (logs.length ? logs.map(function(l){ return '<li><time>' + l.time + '</time>' + l.text + '</li>'; }).join("") : '<li>아직 조치 기록이 없습니다.</li>') + '</ul>';
+      '<ul class="log">' + (logs.length ? logs.map(function(l){ return '<li><time>' + l.time + '</time>' + (l.html || esc(l.text)) + '</li>'; }).join("") : '<li>아직 조치 기록이 없습니다.</li>') + '</ul>';
   }
 
   var SORT_LABEL = {sev:"상태 심각도순", id:"장치번호순", dong:"동 이름순"};
@@ -1248,6 +1289,7 @@
       else if (base === "off" || how === "timeout"){ r.result = "lost"; r.after = how === "timeout" ? "10분 동안 센서 값이 오지 않음" : "센서 통신 끊김"; }
       else { r.result = "fail"; r.after = LABEL[base] + " · " + reasonOf(u) + (r.acts.indexOf("repair") >= 0 ? " (수리 필요로 기록됨)" : ""); }
       saveRecords();
+      if (r.client === CLIENT) sendEvent("result", u.id, {rid:r.rid, result:r.result, after:r.after, afterSt:r.afterSt, doneAt:r.doneAt});
       if (r.result !== "ok") toast(u.id + " " + (r.result === "fail" ? "조치 후에도 이상: " : "확인 못 함: ") + r.after);
     }
     setStatus(u, statusOf(u), now);
@@ -1262,6 +1304,7 @@
   var recFor = null, recOpener = null;
   var recDlg = document.getElementById("recDlg");
   function openRecord(id, opener){
+    if (needLogin(function(){ openRecord(id, opener); })) return;
     var u = byId[id]; if (!u || u.verify) return;
     recFor = id; recOpener = opener || null;
     document.getElementById("recDev").innerHTML = '<b>' + u.id + ' ' + esc(u.dong) + '</b> · ' + LABEL[u.status] + (reasonOf(u) ? ' · ' + reasonOf(u) : '');
@@ -1307,9 +1350,11 @@
     setTimeout(function(){
       var now = Date.now();
       var r = {rid:now + "-" + u.id, id:u.id, dong:u.dong, ts:now, who:who || "현장 담당자", acts:acts,
-               memo:document.getElementById("recMemo").value.trim(), beforeSt:u.status, before:reasonOf(u), since:u.since, result:"wait"};
+               memo:document.getElementById("recMemo").value.trim(), beforeSt:u.status, before:reasonOf(u), since:u.since, result:"wait", client:CLIENT,
+               by:(SHARED && auth.name) || ""};
       if (u.dispatch){ r.reqAt = u.dispatch.ts; r.reqTo = u.dispatch.to; r.startAt = u.dispatch.startAt || null; }
       records.push(r); saveRecords();
+      sendEvent("record", u.id, r);
       if (!u.real) applyActsSim(u, acts);
       u.dispatch = null;
       u.verify = {rid:r.rid, ts:now, ticks:0, entry:u.entryId || 0};
@@ -1338,13 +1383,217 @@
     saveRecords();
   })();
 
+  // ---------- 공유 기록 서버와 주고받기 ----------
+  // 이 기기에서 일어난 일(출동 요청·출발·조치 기록·확인 결과)을 서버에 보내고, 15초마다 다른 기기의 일을 받아 온다.
+  // 보내지 못한 것은 이 기기에 보관했다가 다시 보낸다.
+  var SHARED = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(SERVER_URL) && GOOGLE_CLIENT_ID.indexOf("여기에") !== 0;
+  if (!SHARED && SERVER_URL.indexOf("여기에") !== 0) console.warn("SERVER_URL과 GOOGLE_CLIENT_ID를 모두 넣어야 공유 서버를 씁니다.");
+  var CLIENT = (function(){
+    var c = null; try { c = localStorage.getItem("clientId"); } catch(e){}
+    if (!c || !/^[a-z0-9]{6,20}$/.test(c)){
+      c = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).replace(/[^a-z0-9]/g, "").slice(0, 12);
+      try { localStorage.setItem("clientId", c); } catch(e){}
+    }
+    return c;
+  })();
+  var srv = {ok:null, seq:0, seen:{}, outbox:[], sending:false, n:0};
+  try { srv.outbox = JSON.parse(localStorage.getItem("outbox") || "[]") || []; } catch(e){ srv.outbox = []; }
+  if (!Array.isArray(srv.outbox)) srv.outbox = [];
+  function saveOutbox(){ try { localStorage.setItem("outbox", JSON.stringify(srv.outbox.slice(-100))); } catch(e){} }
+  function sendEvent(type, id, data){
+    var ev = {eid:CLIENT + "-" + Date.now().toString(36) + "-" + (srv.n++).toString(36), type:type, id:id, client:CLIENT, ts:Date.now(), data:data};
+    srv.seen[ev.eid] = true;
+    if (!SHARED) return;
+    srv.outbox.push(ev); saveOutbox(); flushOutbox();
+  }
+  function flushOutbox(){
+    if (!SHARED || srv.sending || !srv.outbox.length || !authValid()) return;   // 로그인 전에는 보관만
+    srv.sending = true;
+    var ev = srv.outbox[0];
+    srv.seen[ev.eid] = true;
+    var body = {action:"event", token:auth.token}; for (var k in ev) body[k] = ev[k];
+    fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body)})   // text/plain: 사전 요청 없이 보내기
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        srv.sending = false; srv.ok = true;
+        if (!res.ok && res.auth){ authFailed(res.error); return; }   // 로그인 만료·학교 계정 아님 → 보관, 다시 로그인 요청
+        if (!res.ok && res.retry) return;                     // 서버가 바쁨(속도 제한) → 보관했다가 다음 확인 때 다시
+        srv.outbox.shift(); saveOutbox();                     // 받아들였거나(ok) 형식 오류로 거절(다시 보내도 같음) → 목록에서 뺌
+        if (!res.ok) console.warn("서버가 거절한 기록:", res.error, ev);
+        flushOutbox();
+      })
+      .catch(function(){ srv.sending = false; srv.ok = false; if (view === "field") renderField(); });   // 통신 실패 → 다음 확인 때 다시
+  }
+  function findRecord(rid){ for (var i = records.length - 1; i >= 0; i--) if (records[i].rid === rid) return records[i]; return null; }
+  function applyEvent(ev){
+    if (ev.seq) srv.seq = Math.max(srv.seq, ev.seq);
+    if (srv.seen[ev.eid]) return false;
+    srv.seen[ev.eid] = true;
+    var u = byId[ev.id], d = ev.data || {}; if (!u) return false;
+    if (ev.type === "dispatch"){
+      if (u.status === "good") return true;
+      u.dispatch = {ts:d.ts, to:d.to, note:d.note || "", startAt:null};
+      actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출동 요청 → " + d.to + (d.note ? " · " + d.note : "")});
+    } else if (ev.type === "start"){
+      if (u.dispatch && !u.dispatch.startAt) u.dispatch.startAt = d.ts;
+      actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출발" + (u.dispatch ? " (" + u.dispatch.to + ")" : "")});
+    } else if (ev.type === "record"){
+      if (findRecord(d.rid)) return true;
+      var r = {}; for (var k in d) r[k] = d[k];
+      r.id = u.id; r.dong = u.dong; r.result = "wait"; r.by = ev.by || "";
+      records.push(r); saveRecords();
+      if (!u.verify){                       // 다른 기기의 기록도 이 화면에서 센서 확인을 기다림
+        if (!u.real) applyActsSim(u, r.acts);
+        u.dispatch = null;
+        u.verify = {rid:r.rid, ts:r.ts, ticks:0, entry:u.entryId || 0};
+        setStatus(u, statusOf(u), r.ts);
+      }
+    } else if (ev.type === "result"){
+      var rr = findRecord(d.rid); if (!rr) return true;
+      if (u.real && u.verify && u.verify.rid === d.rid) return true;   // 실측 장치(GA-001)는 이 화면이 ThingSpeak 값으로 직접 판단
+      rr.result = d.result; rr.after = d.after; rr.afterSt = d.afterSt; rr.doneAt = d.doneAt;
+      saveRecords();
+      if (u.verify && u.verify.rid === d.rid){   // 기록한 기기의 판단을 따름
+        u.verify = null;
+        if (!u.real && d.result === "ok" && baseStatus(u) !== "good"){ applyActsSim(u, ["box", "inlet"]); u.level = 0.1; u.tier = "NORMAL"; }
+        setStatus(u, statusOf(u), d.doneAt || Date.now());
+      }
+    }
+    return true;
+  }
+  function pollServer(done){   // done(true: 성공 / false: 로그인 거절 / null: 통신 실패)
+    done = done || function(){};
+    if (!SHARED || (document.visibilityState === "hidden" && !arguments.length)) return;
+    if (!authValid()){ if (view === "field") renderField(); done(false); return; }   // 로그인해야 공유 기록을 받음
+    var from = new Date(); from.setHours(0, 0, 0, 0);
+    fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+                       body:JSON.stringify({action:"list", token:auth.token, since:srv.seq, from:from.getTime()})})
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res && !res.ok && res.auth){ authFailed(res.error); done(false); return; }
+        if (!res || !res.ok) throw new Error((res && res.error) || "응답 오류");
+        srv.ok = true;
+        var changed = false;
+        (res.events || []).forEach(function(ev){ if (applyEvent(ev)) changed = true; });
+        if (res.last) srv.seq = Math.max(srv.seq, res.last);
+        flushOutbox();
+        if (changed || view === "field") render();
+        done(true);
+      })
+      .catch(function(){ srv.ok = false; if (view === "field") renderField(); done(null); });
+  }
+
+  // ---------- 학교 계정 로그인 (Google로 로그인) ----------
+  // 구글이 준 ID 토큰을 서버에 같이 보내고, 서버가 구글에 확인해 학교 계정(@ewha.ac.kr, @ewhain.net)일 때만 읽기·쓰기를 허락한다.
+  // 토큰은 이 탭에만 보관(sessionStorage)하고 약 1시간 뒤 만료된다. 비밀번호는 구글 창에서만 입력한다.
+  var auth = {token:null, exp:0, name:"", email:""};
+  var pendingAuth = null, loginDlg = document.getElementById("loginDlg"), gsiReady = false;
+  function decodeJwt(tok){
+    try { var s = tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "=";
+          return JSON.parse(decodeURIComponent(escape(atob(s)))); } catch(e){ return null; }
+  }
+  function authValid(){ return !!auth.token && auth.exp * 1000 > Date.now() + 30000; }
+  function setAuth(tok){
+    var p = decodeJwt(tok); if (!p) return false;
+    auth = {token:tok, exp:Number(p.exp) || 0, name:String(p.name || (p.email || "").split("@")[0]), email:String(p.email || ""), hd:String(p.hd || "")};
+    try { sessionStorage.setItem("idToken", tok); localStorage.setItem("wasLoggedIn", "1"); } catch(e){}
+    renderAuth(); return true;
+  }
+  function clearAuth(){
+    auth = {token:null, exp:0, name:"", email:""};
+    try { sessionStorage.removeItem("idToken"); } catch(e){}
+    renderAuth();
+  }
+  function renderAuth(){
+    if (!SHARED) return;
+    document.getElementById("authLi").hidden = false;
+    var b = document.getElementById("authBtn");
+    b.textContent = authValid() ? auth.name + " · 로그아웃" : "학교 계정 로그인";
+    b.setAttribute("aria-label", authValid() ? auth.name + "(" + auth.email + ") 로그아웃" : "학교 계정으로 로그인");
+  }
+  function authFailed(msg){
+    clearAuth();
+    try { localStorage.removeItem("wasLoggedIn"); } catch(e){}
+    if (view === "field") renderField();
+    openLogin(msg || "다시 로그인해 주세요.");
+  }
+  // 로그인이 필요한 동작이면 로그인 창을 띄우고, 로그인 후 그 동작을 이어서 한다
+  function needLogin(fn){
+    if (!SHARED || authValid()) return false;
+    pendingAuth = fn; openLogin(); return true;
+  }
+  function openLogin(msg){
+    var err = document.getElementById("loginErr");
+    err.hidden = !msg; err.textContent = msg || "";
+    if (!loginDlg.open){ if (loginDlg.showModal) loginDlg.showModal(); else loginDlg.setAttribute("open", ""); }
+    if (!gsiReady) document.getElementById("gsiBtn").textContent = "로그인 버튼을 불러오는 중…";
+  }
+  function closeLogin(){ if (loginDlg.open){ if (loginDlg.close) loginDlg.close(); else loginDlg.removeAttribute("open"); } }
+  document.getElementById("loginClose").addEventListener("click", function(){ pendingAuth = null; closeLogin(); });
+  function onCredential(resp){
+    var p = resp && resp.credential && decodeJwt(resp.credential);
+    if (!p){ openLogin("로그인 정보를 읽지 못했어요. 다시 시도해 주세요."); return; }
+    setAuth(resp.credential);
+    var err = document.getElementById("loginErr");
+    err.hidden = false; err.textContent = "학교 계정인지 확인하는 중…";
+    // 서버가 학교 계정으로 확인해 준 뒤에만 하려던 일을 이어서 함(거절되면 창에 이유가 보임)
+    pollServer(function(ok){
+      if (ok === false) return;
+      err.hidden = true;
+      closeLogin();
+      toast(auth.name + "님, 로그인했어요." + (ok === null ? " (서버 연결이 불안정해 기록은 보관 후 보내요)" : ""));
+      var fn = pendingAuth; pendingAuth = null;
+      flushOutbox(); render();
+      if (fn) fn();
+    });
+  }
+  document.getElementById("authBtn").addEventListener("click", function(){
+    if (authValid()){
+      clearAuth();
+      try { localStorage.removeItem("wasLoggedIn"); } catch(e){}
+      if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+      toast("로그아웃했어요.");
+      render();
+    } else openLogin();
+  });
+  document.getElementById("fLogin").addEventListener("click", function(){ openLogin(); });
+  function loadGsi(){
+    var s = document.createElement("script");
+    s.src = GSI_SRC; s.async = true; s.defer = true;
+    s.onload = function(){
+      try {
+        google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true,
+                                       cancel_on_tap_outside:true, use_fedcm_for_prompt:true});
+        var el = document.getElementById("gsiBtn"); el.textContent = "";
+        google.accounts.id.renderButton(el, {theme:"outline", size:"large", text:"signin_with", shape:"rectangular", locale:"ko", width:280});
+        gsiReady = true;
+        // 전에 로그인했던 기기면 조용히 다시 로그인(토큰 1시간 만료 대비)
+        var was = null; try { was = localStorage.getItem("wasLoggedIn"); } catch(e){}
+        if (was && !authValid()) google.accounts.id.prompt();
+      } catch(e){ document.getElementById("gsiBtn").textContent = "로그인 버튼을 불러오지 못했어요."; }
+    };
+    s.onerror = function(){ document.getElementById("gsiBtn").textContent = "구글 로그인에 연결하지 못했어요. 인터넷 연결을 확인해 주세요."; };
+    document.head.appendChild(s);
+  }
+  if (SHARED){
+    try { var saved = sessionStorage.getItem("idToken"); if (saved) setAuth(saved); } catch(e){}
+    if (!authValid()) clearAuth();
+    renderAuth();
+    loadGsi();
+    // 토큰이 곧 만료되면 조용히 새로 받기
+    setInterval(function(){
+      if (auth.token && auth.exp * 1000 - Date.now() < 5 * 60000 && window.google && google.accounts && google.accounts.id) google.accounts.id.prompt();
+    }, 60000);
+  }
+
   // ---------- 출동 요청 → 출발 ----------
   // 단계: 출동 요청됨(누구에게) → 출동 중(현장 담당자가 「출발」) → 조치 결과 기록 → 조치 확인 대기 → 확인
   function dispatchText(d){
-    return d.startAt ? "출동 중 · " + d.to + " · " + hhmm(d.startAt) + " 출발" : "출동 요청됨 · " + d.to + " · " + hhmm(d.ts) + " (출발 전)";
+    return d.startAt ? "출동 중 · " + esc(d.to) + " · " + hhmm(d.startAt) + " 출발" : "출동 요청됨 · " + esc(d.to) + " · " + hhmm(d.ts) + " (출발 전)";
   }
   var dspFor = null, dspOpener = null, dspDlg = document.getElementById("dspDlg");
   function openDispatch(id, opener){
+    if (needLogin(function(){ openDispatch(id, opener); })) return;
     var u = byId[id]; if (!u) return;
     dspFor = id; dspOpener = opener || null;
     document.getElementById("dspDev").innerHTML = '<b>' + u.id + ' ' + esc(u.dong) + '</b> · ' + LABEL[u.status] + (reasonOf(u) ? ' · ' + reasonOf(u) : '');
@@ -1367,6 +1616,7 @@
     setTimeout(function(){
       var now = Date.now();
       u.dispatch = {ts:now, to:to, note:note, startAt:null};
+      sendEvent("dispatch", u.id, {ts:now, to:to, note:note});
       actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"현장 출동 요청 → " + to + (note ? " · " + note : "")});
       closeDispatch();
       toast(u.id + " 출동을 " + to + "에 요청했어요.");
@@ -1374,9 +1624,11 @@
     }, 400);
   });
   function startDispatch(id){
+    if (needLogin(function(){ startDispatch(id); })) return;
     var u = byId[id]; if (!u || !u.dispatch || u.dispatch.startAt) return;
     var now = Date.now();
     u.dispatch.startAt = now;
+    sendEvent("start", u.id, {ts:now});
     actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"현장 출발 (" + u.dispatch.to + ")"});
     toast(u.id + " 출발을 알렸어요. 상황실 화면에 \"출동 중\"으로 보여요.");
     render();
@@ -1398,7 +1650,15 @@
       var k = b.getAttribute("data-tab");
       b.textContent = {need:"조치 필요", chk:"확인 대기", done:"오늘 기록"}[k] + " " + tabN[k];
     });
-    var hint = {need:(req ? "출동 요청·출동 중 " + req + "대 · " : "") + "정렬: 출동 건 먼저, 위험 → 통신 끊김 → 주의, 오래된 순", chk:"센서가 다음 값을 보내면 자동으로 확인됩니다", done:"오늘 이 기기에서 남긴 기록 (서버 연결 전)"}[fTab];
+    var hint = {need:(req ? "출동 요청·출동 중 " + req + "대 · " : "") + "정렬: 출동 건 먼저, 위험 → 통신 끊김 → 주의, 오래된 순", chk:"센서가 다음 값을 보내면 자동으로 확인됩니다", done:SHARED ? "오늘 남긴 기록 (모든 기기 공유)" : "오늘 이 기기에서 남긴 기록 (공유 서버 연결 전)"}[fTab];
+    var sv = document.getElementById("fServer");
+    var needIn = SHARED && !authValid();
+    document.getElementById("fLoginP").hidden = !needIn;
+    sv.textContent = !SHARED ? "공유 서버 연결 전 · 기록은 이 기기에만 저장"
+      : needIn ? "학교 계정으로 로그인하면 공유 기록을 보고 남길 수 있어요" + (srv.outbox.length ? " (보낼 기록 " + srv.outbox.length + "건 보관 중)" : "")
+      : srv.ok === false ? "공유 서버에 연결하지 못함 · 기록은 이 기기에 보관 후 다시 보냄" + (srv.outbox.length ? " (보낼 기록 " + srv.outbox.length + "건)" : "")
+      : srv.ok ? "공유 서버 연결됨 · 기록이 모든 화면에 함께 보임" : "공유 서버 연결 중…";
+    sv.className = "f-meta srv " + (!SHARED || needIn ? "" : srv.ok === false ? "bad" : srv.ok ? "good" : "");
     document.getElementById("fHint").textContent = hint;
     var html;
     if (fTab === "need"){
@@ -1436,7 +1696,7 @@
           '<div class="f-top">' + b + '<span class="f-dur">' + hhmm(r.ts) + ' 기록 → ' + hhmm(r.doneAt) + '</span></div>' +
           '<h2 class="f-title"><span class="num">' + r.id + '</span> ' + esc(r.dong) + '</h2>' +
           '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
-          '<p class="f-meta">' + esc(r.who) + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
+          '<p class="f-meta">' + esc(r.who) + (r.by ? ' · 기록: ' + esc(r.by) : '') + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
           (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + ' → 기록 ' + hhmm(r.ts) + ' → 확인 ' + hhmm(r.doneAt) + '</p>' : '') +
           '<p class="f-meta">결과: ' + esc(r.after || "") + '</p>' +
           (again ? '<div class="f-btns"><button type="button" class="btn primary" data-rec="' + r.id + '">다시 조치 결과 기록</button></div>' : '') + '</li>';
@@ -1633,7 +1893,10 @@
            '<path d="M' + c + ' ' + (c - 3.6 * k) + 'v' + (4.6 * k) + '" stroke="#1e2124" stroke-width="' + (1.8 * k) + '" stroke-linecap="round"/>' +
            '<circle cx="' + c + '" cy="' + (c + 3.8 * k) + '" r="' + (1.1 * k) + '" fill="#1e2124"/>';
     } else if (u.status === "chk"){
-      // 조치 확인 대기: 파란 원 + 시계 바늘, 흰 테두리
+      // 조치 확인 대기: 파란 원 + 시계 바늘, 흰 테두리. 센서가 아직 위험이면 위험 테두리도 함께
+      var ab = alertSt(u);
+      if (ab === "crit") s += '<circle class="ring" cx="' + c + '" cy="' + c + '" r="' + (12 * k) + '" fill="none" stroke="var(--crit-icon)" stroke-width="2.5"/>';
+      else if (ab === "warn") s += '<circle cx="' + c + '" cy="' + c + '" r="' + (10.5 * k) + '" fill="none" stroke="var(--warn-icon)" stroke-width="2.5"/>';
       s += '<circle cx="' + c + '" cy="' + c + '" r="' + (7 * k) + '" fill="var(--info-icon)" stroke="#ffffff" stroke-width="2.5"/>' +
            '<path d="M' + c + ' ' + (c - 4 * k) + 'V' + c + 'l' + (2.8 * k) + ' ' + (1.8 * k) + '" fill="none" stroke="var(--surface)" stroke-width="' + (1.8 * k) + '" stroke-linecap="round" stroke-linejoin="round"/>';
     } else if (u.status === "off"){
@@ -1760,7 +2023,7 @@
   function updateMap(st){
     units.forEach(function(u){
       var sel = !st.big && u.id === selectedId;
-      var key = u.status + (sel ? "*" : "");
+      var key = u.status + "/" + alertSt(u) + (sel ? "*" : "");
       var o = st.mk[u.id];
       if (o.key === key) return;
       o.key = key;
@@ -1784,7 +2047,7 @@
     if (!st || !st.big) return;
     var placed = [], cont = st.map.getContainer().getBoundingClientRect();
     var list = units.filter(function(u){ return u.status !== "good"; })
-                    .sort(function(a, b){ return SEV[a.status] - SEV[b.status]; });   // 위험 먼저 좋은 자리
+                    .sort(function(a, b){ return SEV[alertSt(a)] - SEV[alertSt(b)]; });   // 위험 먼저 좋은 자리
     list.forEach(function(u){
       var o = st.mk[u.id], tt = o.m.getTooltip && o.m.getTooltip();
       if (!tt) return;
@@ -1823,7 +2086,11 @@
 
   function render(){
     var counts = {good:0, warn:0, crit:0, off:0, chk:0};
-    units.forEach(function(u){ counts[u.status]++; });
+    units.forEach(function(u){
+      counts[u.status]++;
+      var a = alertSt(u);
+      if (u.status === "chk" && a !== "good") counts[a]++;   // 확인 대기 중이어도 센서 기준 위험·주의는 숫자와 긴급 공지에 그대로
+    });
     var att = attentionList();
     document.getElementById("tTotalS").textContent = "관악구 21개 동" + (counts.off ? " · 통신 끊김 " + counts.off + "대" : "") + (counts.chk ? " · 조치 확인 대기 " + counts.chk + "대" : "");
     document.getElementById("tsErr").textContent = tsInfo.ok === false ? "지금 ThingSpeak에서 값을 읽지 못하고 있습니다: " + tsInfo.error : "";
@@ -2036,6 +2303,11 @@
   setInterval(function(){ units.forEach(step); render(); }, 4000);
   pollThingSpeak();
   setInterval(pollThingSpeak, TS_POLL_MS);
+  if (SHARED){
+    pollServer();
+    setInterval(pollServer, 15000);
+    document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "visible") pollServer(); });
+  }
 })();
 </script>
 </body>
