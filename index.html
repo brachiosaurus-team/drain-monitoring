@@ -383,6 +383,8 @@
   .rec-dlg .fl{font-weight:700;display:block;margin-bottom:6px}
   .rec-dlg textarea,.rec-dlg input[type=text]{width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;min-height:48px;border:1px solid var(--border-input);border-radius:6px;background:var(--surface);color:var(--text)}
   .rec-err{color:var(--crit-text);font-weight:700;margin:0}
+  .dsp-line{margin:0;align-self:center;padding:8px 12px;border-radius:6px;background:var(--primary-soft);color:var(--link);font-weight:700;font-size:.9375rem}
+  .f-btns .wide{grid-column:1/-1}
   .rec-note{font-size:.875rem;color:var(--text-2);margin:0}
   .rec-btns{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:-24px;margin:0 -24px -24px;padding:12px 24px 24px;background:var(--surface);border-top:1px solid var(--line)}   /* 휴대폰에서 창이 길어도 버튼은 항상 보이게 */
   .rec-btns .btn{min-height:48px;padding:0 20px;font-size:1rem}
@@ -688,6 +690,21 @@
   </div>
 </main>
 
+<dialog class="rec-dlg" id="dspDlg" aria-labelledby="dspH">
+  <form id="dspForm" novalidate>
+    <h2 id="dspH">현장 출동 요청</h2>
+    <p class="rec-dev" id="dspDev"></p>
+    <fieldset>
+      <legend>누구에게 요청할까요?</legend>
+      <label class="chk-opt"><input type="radio" name="dspTo" value="현장기동반" checked>현장기동반 (신고·이상 즉시 출동)</label>
+      <label class="chk-opt"><input type="radio" name="dspTo" value="빗물받이 전담관리자">빗물받이 전담관리자 (점검·퇴적물 제거)</label>
+      <label class="chk-opt"><input type="radio" name="dspTo" value="청소업체">청소업체 (수납함 수거·준설)</label>
+    </fieldset>
+    <div><label class="fl" for="dspNote">요청 내용 (선택)</label><input type="text" id="dspNote" maxlength="60" placeholder="예) 수납함1 가득 참, 비 오기 전 수거"></div>
+    <p class="rec-note">요청하면 현장 화면 맨 위에 보이고, 담당자가 「출발」을 누르면 여기에도 "출동 중"으로 바뀝니다. 역할 이름은 서울시 빗물받이 관리대책(2024)에 나오는 이름이며, 실제 배정 방식은 구청마다 다를 수 있습니다.</p>
+    <div class="rec-btns"><button type="button" class="btn" id="dspCancel">취소</button><button type="submit" class="btn primary" id="dspOk">출동 요청</button></div>
+  </form>
+</dialog>
 <dialog class="rec-dlg" id="recDlg" aria-labelledby="recH">
   <form id="recForm" novalidate>
     <h2 id="recH">조치 결과 기록</h2>
@@ -1136,7 +1153,7 @@
       '<div class="boxes">' + boxMeter(1, u.fill1, u.full1) + boxMeter(2, u.fill2, u.full2) + '</div>' +
       (u.real && u.everData ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + '</p>' : '') +
       '<div class="actions">' +
-        (u.dispatch ? '<button type="button" class="btn primary" disabled aria-disabled="true">출동 요청됨 · ' + hhmm(u.dispatch.ts) + '</button>'
+        (u.dispatch ? '<p class="dsp-line">' + dispatchText(u.dispatch) + '</p>'
                     : '<button type="button" class="btn primary" data-act="dispatch"' + (u.status === "good" || u.verify ? ' disabled aria-disabled="true"' : '') + '>현장 출동 요청</button>') +
         (u.verify ? '<button type="button" class="btn secondary" disabled aria-disabled="true">센서 확인 중</button>'
                   : '<button type="button" class="btn secondary" data-act="record">조치 결과 기록</button>') +
@@ -1195,7 +1212,7 @@
     document.getElementById("oList").innerHTML = shown.length ? shown.map(function(u){
       return '<li class="o-item ' + u.status + '">' + icon(u.status, 28).replace('<svg', '<svg class="ic"') +
         '<span class="who">' + u.id + ' ' + esc(u.dong) + '</span>' +
-        '<span class="why">' + LABEL[u.status] + ' · ' + reasonOf(u) + '</span>' +
+        '<span class="why">' + LABEL[u.status] + ' · ' + reasonOf(u) + (u.dispatch ? ' · ' + (u.dispatch.startAt ? '출동 중' : '출동 요청됨') : '') + '</span>' +
         '<span class="dur">' + durText(u).replace("째", "") + '<small>지속</small></span></li>';
     }).join("") + (att.length > 6 ? '<li class="o-more">외 ' + (att.length - 6) + '대는 모니터링 화면에서 확인</li>' : '')
       : '<li class="empty">모든 장치 정상</li>';
@@ -1291,6 +1308,7 @@
       var now = Date.now();
       var r = {rid:now + "-" + u.id, id:u.id, dong:u.dong, ts:now, who:who || "현장 담당자", acts:acts,
                memo:document.getElementById("recMemo").value.trim(), beforeSt:u.status, before:reasonOf(u), since:u.since, result:"wait"};
+      if (u.dispatch){ r.reqAt = u.dispatch.ts; r.reqTo = u.dispatch.to; r.startAt = u.dispatch.startAt || null; }
       records.push(r); saveRecords();
       if (!u.real) applyActsSim(u, acts);
       u.dispatch = null;
@@ -1320,6 +1338,50 @@
     saveRecords();
   })();
 
+  // ---------- 출동 요청 → 출발 ----------
+  // 단계: 출동 요청됨(누구에게) → 출동 중(현장 담당자가 「출발」) → 조치 결과 기록 → 조치 확인 대기 → 확인
+  function dispatchText(d){
+    return d.startAt ? "출동 중 · " + d.to + " · " + hhmm(d.startAt) + " 출발" : "출동 요청됨 · " + d.to + " · " + hhmm(d.ts) + " (출발 전)";
+  }
+  var dspFor = null, dspOpener = null, dspDlg = document.getElementById("dspDlg");
+  function openDispatch(id, opener){
+    var u = byId[id]; if (!u) return;
+    dspFor = id; dspOpener = opener || null;
+    document.getElementById("dspDev").innerHTML = '<b>' + u.id + ' ' + esc(u.dong) + '</b> · ' + LABEL[u.status] + (reasonOf(u) ? ' · ' + reasonOf(u) : '');
+    document.querySelector('#dspForm input[value="현장기동반"]').checked = true;
+    document.getElementById("dspNote").value = "";
+    var ok = document.getElementById("dspOk"); ok.disabled = false; ok.textContent = "출동 요청";
+    if (dspDlg.showModal) dspDlg.showModal(); else dspDlg.setAttribute("open", "");
+    document.querySelector('#dspForm input[name="dspTo"]:checked').focus();
+  }
+  function closeDispatch(){ if (dspDlg.open){ if (dspDlg.close) dspDlg.close(); else dspDlg.removeAttribute("open"); } }
+  dspDlg.addEventListener("close", function(){ var o = dspOpener; dspOpener = null; if (o && document.body.contains(o)) o.focus(); else { var d = document.getElementById("detail"); if (d && !d.closest("[hidden]")) d.focus({preventScroll:true}); } });
+  document.getElementById("dspCancel").addEventListener("click", closeDispatch);
+  document.getElementById("dspForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var ok = document.getElementById("dspOk"); if (ok.disabled) return;
+    var u = byId[dspFor]; if (!u){ closeDispatch(); return; }
+    var to = document.querySelector('#dspForm input[name="dspTo"]:checked').value;
+    var note = document.getElementById("dspNote").value.trim();
+    ok.disabled = true; ok.textContent = "요청하는 중…";
+    setTimeout(function(){
+      var now = Date.now();
+      u.dispatch = {ts:now, to:to, note:note, startAt:null};
+      actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"현장 출동 요청 → " + to + (note ? " · " + note : "")});
+      closeDispatch();
+      toast(u.id + " 출동을 " + to + "에 요청했어요.");
+      render();
+    }, 400);
+  });
+  function startDispatch(id){
+    var u = byId[id]; if (!u || !u.dispatch || u.dispatch.startAt) return;
+    var now = Date.now();
+    u.dispatch.startAt = now;
+    actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"현장 출발 (" + u.dispatch.to + ")"});
+    toast(u.id + " 출발을 알렸어요. 상황실 화면에 \"출동 중\"으로 보여요.");
+    render();
+  }
+
   // ---------- 현장 화면 ----------
   var fTab = "need", fListHtml = "";
   function kakaoTo(u){ return "https://map.kakao.com/link/to/" + encodeURIComponent(u.id + " " + u.dong) + "," + u.ll[0] + "," + u.ll[1]; }
@@ -1336,18 +1398,22 @@
       var k = b.getAttribute("data-tab");
       b.textContent = {need:"조치 필요", chk:"확인 대기", done:"오늘 기록"}[k] + " " + tabN[k];
     });
-    var hint = {need:(req ? "출동 요청 " + req + "대 · " : "") + "출동 요청 먼저, 위험 → 통신 끊김 → 주의, 오래된 순", chk:"센서가 다음 값을 보내면 자동으로 확인됩니다", done:"오늘 이 기기에서 남긴 기록 (서버 연결 전)"}[fTab];
+    var hint = {need:(req ? "출동 요청·출동 중 " + req + "대 · " : "") + "정렬: 출동 건 먼저, 위험 → 통신 끊김 → 주의, 오래된 순", chk:"센서가 다음 값을 보내면 자동으로 확인됩니다", done:"오늘 이 기기에서 남긴 기록 (서버 연결 전)"}[fTab];
     document.getElementById("fHint").textContent = hint;
     var html;
     if (fTab === "need"){
       html = need.length ? need.map(function(u){
         return '<li class="f-card ' + u.status + '">' +
           '<div class="f-top">' + badge(u.status) + '<span class="f-dur">' + durText(u) + '</span></div>' +
-          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + (u.dispatch ? '<span class="f-tag">출동 요청됨</span>' : '') + '</h2>' +
+          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + (u.dispatch ? '<span class="f-tag">' + (u.dispatch.startAt ? "출동 중" : "출동 요청") + '</span>' : '') + '</h2>' +
           '<p class="f-why">' + reasonOf(u) + '</p>' +
+          (u.dispatch ? '<p class="f-meta"><b>' + esc(u.dispatch.to) + '</b> · ' + hhmm(u.dispatch.ts) + ' 요청' + (u.dispatch.startAt ? ' → ' + hhmm(u.dispatch.startAt) + ' 출발' : '') + (u.dispatch.note ? ' · ' + esc(u.dispatch.note) : '') + '</p>' : '') +
           '<p class="f-meta">' + (u.real ? "실증 장치" : "가상 장치") + ' · ' + esc(u.basis || "") + '</p>' +
           '<div class="f-btns"><a class="btn" href="' + kakaoTo(u) + '" target="_blank" rel="noopener">길찾기<span class="sr-only"> (카카오맵, 새 창)</span></a>' +
-          '<button type="button" class="btn primary" data-rec="' + u.id + '">조치 결과 기록</button></div></li>';
+          (u.dispatch && !u.dispatch.startAt
+            ? '<button type="button" class="btn primary" data-start="' + u.id + '">출발</button>' +
+              '<button type="button" class="btn secondary wide" data-rec="' + u.id + '">조치 결과 기록</button>'
+            : '<button type="button" class="btn primary" data-rec="' + u.id + '">조치 결과 기록</button>') + '</div></li>';
       }).join("") : '<li class="f-empty">지금은 조치가 필요한 장치가 없어요.</li>';
     } else if (fTab === "chk"){
       html = chk.length ? chk.map(function(u){
@@ -1357,7 +1423,8 @@
           '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + '</h2>' +
           (r ? '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
                '<p class="f-meta">' + hhmm(r.ts) + ' · ' + esc(r.who) + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
-               '<p class="f-meta">조치 전: ' + LABEL[r.beforeSt] + (r.before ? ' · ' + esc(r.before) : '') + '</p>' : '') +
+               '<p class="f-meta">조치 전: ' + LABEL[r.beforeSt] + (r.before ? ' · ' + esc(r.before) : '') + '</p>' +
+               (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + '</p>' : '') : '') +
           '<p class="f-meta">' + (u.real ? "실측 장치는 다음 전송(약 15~20초 간격)을 기다립니다." : "가상 장치는 약 10초 뒤 확인됩니다.") + '</p></li>';
       }).join("") : '<li class="f-empty">확인을 기다리는 기록이 없어요.</li>';
     } else {
@@ -1370,6 +1437,7 @@
           '<h2 class="f-title"><span class="num">' + r.id + '</span> ' + esc(r.dong) + '</h2>' +
           '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
           '<p class="f-meta">' + esc(r.who) + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
+          (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + ' → 기록 ' + hhmm(r.ts) + ' → 확인 ' + hhmm(r.doneAt) + '</p>' : '') +
           '<p class="f-meta">결과: ' + esc(r.after || "") + '</p>' +
           (again ? '<div class="f-btns"><button type="button" class="btn primary" data-rec="' + r.id + '">다시 조치 결과 기록</button></div>' : '') + '</li>';
       }).join("") : '<li class="f-empty">오늘 남긴 기록이 없어요.</li>';
@@ -1381,6 +1449,7 @@
     fTab = b.getAttribute("data-tab"); setPressed("fTabs", b); renderField();
   });
   document.getElementById("fList").addEventListener("click", function(e){
+    var s = e.target.closest("[data-start]"); if (s){ startDispatch(s.getAttribute("data-start")); return; }
     var b = e.target.closest("[data-rec]"); if (b) openRecord(b.getAttribute("data-rec"), b);
   });
 
@@ -1864,14 +1933,7 @@
     var u = byId[selectedId]; if (!u) return;
     var act = b.getAttribute("data-act");
     if (act === "record"){ openRecord(u.id, b); return; }
-    b.disabled = true; b.textContent = "처리 중…";
-    setTimeout(function(){
-      var now = Date.now();
-      u.dispatch = {ts:now};
-      actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"현장 출동 요청 보냄"});
-      toast(u.id + " 현장 출동을 요청했어요. 현장 화면 맨 위에 표시돼요.");
-      render();
-    }, 400);
+    if (act === "dispatch"){ openDispatch(u.id, b); return; }
   });
 
   function setPressed(groupId, btn){
