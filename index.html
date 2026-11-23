@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>빗물받이 모니터링</title>
+<!-- 휴대폰 홈 화면에 추가(PWA): 현장 화면으로 바로 열림 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#256ef4">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="빗물받이 현장">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap">
@@ -334,6 +340,54 @@
   .o-ev b{font-size:clamp(1.0625rem,1.1vw,1.3125rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .o-ev span{color:var(--text-2);font-size:clamp(.9375rem,1vw,1.1875rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+  /* 조치 확인 대기 (현장 조치를 기록했고 센서 확인을 기다리는 상태) */
+  .badge.chk{background:var(--info-bg);border-color:var(--info-border);color:var(--info-text)}
+  .o-ev.to-chk{border-left-color:var(--info-icon)}
+  /* 현장 화면 (현장 담당자 휴대폰 우선) */
+  .field{max-width:40rem}
+  .f-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
+  .f-sum li{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}
+  .f-sum .l{font-size:.875rem;color:var(--text-2);font-weight:700}
+  .f-sum .v{font-size:1.75rem;font-weight:800;line-height:1.2}
+  .f-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border-input);border-radius:8px;overflow:hidden}
+  .f-tabs button{min-height:48px;padding:0 4px;border:0;border-left:1px solid var(--border-input);background:var(--surface);color:var(--text);font:inherit;font-weight:700;font-size:.9375rem;cursor:pointer}
+  .f-tabs button:first-child{border-left:0}
+  .f-tabs button[aria-pressed="true"]{background:var(--primary);color:var(--btn-text)}
+  .f-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .f-card{background:var(--surface);border:1px solid var(--border);border-left:6px solid var(--ok-icon);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)}
+  .f-card.crit{border-left-color:var(--crit-icon)} .f-card.warn{border-left-color:var(--warn-icon)}
+  .f-card.off{border-left-color:var(--off-icon)} .f-card.chk{border-left-color:var(--info-icon)}
+  .f-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .f-dur{font-weight:700;color:var(--text-2);font-variant-numeric:tabular-nums}
+  .f-title{margin:0;font-size:1.25rem;font-weight:800;line-height:1.4}
+  .f-why{margin:0;font-weight:700}
+  .f-meta{margin:0;font-size:.875rem;color:var(--text-2)}
+  .f-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:4px;background:var(--primary-soft);color:var(--link);font-size:.8125rem;font-weight:700;vertical-align:middle}
+  .f-btns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:8px;margin-top:6px}
+  .f-btns .btn{min-height:48px;font-size:1rem;text-decoration:none}
+  .f-btns .btn:only-child{grid-column:1/-1}
+  .f-empty{padding:32px 16px;text-align:center;color:var(--text-2);background:var(--surface);border:1px dashed var(--border);border-radius:10px}
+  /* 조치 결과 기록 창 */
+  .rec-dlg{border:1px solid var(--border);border-radius:12px;padding:0;width:min(34rem,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--surface);color:var(--text)}
+  .rec-dlg::backdrop{background:rgba(0,0,0,.55)}
+  .rec-dlg form{display:flex;flex-direction:column;gap:16px;padding:24px}
+  .rec-dlg h2{margin:0;font-size:1.375rem}
+  .rec-dev{margin:0;color:var(--text-2)}
+  .rec-dev b{color:var(--text)}
+  .rec-dlg fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .rec-dlg legend{font-weight:700;margin-bottom:8px;padding:0}
+  .chk-opt{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer}
+  .chk-opt input{width:22px;height:22px;margin:0;accent-color:var(--primary);flex:none}
+  .chk-opt:has(input:checked){border-color:var(--primary);background:var(--primary-soft)}
+  .rec-dlg fieldset[aria-invalid="true"] .chk-opt{border-color:var(--crit-icon)}
+  .rec-dlg .fl{font-weight:700;display:block;margin-bottom:6px}
+  .rec-dlg textarea,.rec-dlg input[type=text]{width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;min-height:48px;border:1px solid var(--border-input);border-radius:6px;background:var(--surface);color:var(--text)}
+  .rec-err{color:var(--crit-text);font-weight:700;margin:0}
+  .rec-note{font-size:.875rem;color:var(--text-2);margin:0}
+  .rec-btns{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:-24px;margin:0 -24px -24px;padding:12px 24px 24px;background:var(--surface);border-top:1px solid var(--line)}   /* 휴대폰에서 창이 길어도 버튼은 항상 보이게 */
+  .rec-btns .btn{min-height:48px;padding:0 20px;font-size:1rem}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);background:var(--text);color:var(--surface);padding:12px 20px;border-radius:8px;font-weight:700;z-index:2000;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+
   @media (prefers-reduced-motion: reduce){ .ring{animation:none} .fill{transition:none} }
   @media (max-width:1023px){
     .body-grid,.tools,.hist-grid,.o-body{grid-template-columns:minmax(0,1fr)}
@@ -378,6 +432,7 @@
           <li><a href="#pc" id="navPc">모니터링</a></li>
           <li><a href="#ops" id="navOps">상황실</a></li>
           <li><a href="#history" id="navHist">이력</a></li>
+          <li><a href="#field" id="navField">현장</a></li>
         </ul>
       </nav>
     </div>
@@ -445,6 +500,7 @@
             <li><span data-icon="warn"></span>주의</li>
             <li><span data-icon="crit"></span>위험</li>
             <li><span data-icon="off"></span>통신 끊김</li>
+            <li><span data-icon="chk"></span>조치 확인 대기</li>
             <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--link)" stroke-width="2"/></svg>선택한 장치</li>
             <li id="lgFlood"><span class="sw-flood" aria-hidden="true"></span>침수 예상 구역 (진할수록 깊음)</li>
           </ul>
@@ -543,7 +599,7 @@
         <div class="table-wrap">
           <table>
             <caption>위험 발생 횟수 상위 8개 장치</caption>
-            <thead><tr><th scope="col" class="r">순위</th><th scope="col">장치</th><th scope="col" class="r">위험</th><th scope="col" class="r">주의</th><th scope="col" class="r">청소</th><th scope="col" class="r">평균 A→B 상승</th></tr></thead>
+            <thead><tr><th scope="col" class="r">순위</th><th scope="col">장치</th><th scope="col" class="r">위험</th><th scope="col" class="r">주의</th><th scope="col" class="r">조치</th><th scope="col" class="r">평균 A→B 상승</th></tr></thead>
             <tbody id="hTop"></tbody>
           </table>
         </div>
@@ -567,7 +623,7 @@
             <button type="button" data-hk="all" aria-pressed="true">전체</button>
             <button type="button" data-hk="crit" aria-pressed="false">위험</button>
             <button type="button" data-hk="warn" aria-pressed="false">주의</button>
-            <button type="button" data-hk="clean" aria-pressed="false">청소</button>
+            <button type="button" data-hk="clean" aria-pressed="false">조치</button>
           </div>
         </fieldset>
         <div class="fgroup">
@@ -615,7 +671,43 @@
       <ul class="o-ev-list" id="oEvents"></ul>
     </section>
   </div>
+
+  <!-- ===================== 현장 (현장 담당자 휴대폰) ===================== -->
+  <div class="container view field" id="fieldView" hidden>
+    <div class="page-head">
+      <h1>현장 조치</h1>
+      <p class="meta">관악구 · 현장 담당자 화면 · <time id="fClock" class="num">--:--</time> 기준</p>
+    </div>
+    <div class="f-tabs" role="group" aria-label="목록 고르기" id="fTabs">
+      <button type="button" data-tab="need" aria-pressed="true">조치 필요</button>
+      <button type="button" data-tab="chk" aria-pressed="false">확인 대기</button>
+      <button type="button" data-tab="done" aria-pressed="false">오늘 기록</button>
+    </div>
+    <p class="f-meta" id="fHint"></p>
+    <ul class="f-list" id="fList"></ul>
+  </div>
 </main>
+
+<dialog class="rec-dlg" id="recDlg" aria-labelledby="recH">
+  <form id="recForm" novalidate>
+    <h2 id="recH">조치 결과 기록</h2>
+    <p class="rec-dev" id="recDev"></p>
+    <fieldset id="recActs" aria-describedby="recErr">
+      <legend>한 일 (해당하는 것 모두)</legend>
+      <label class="chk-opt"><input type="checkbox" name="act" value="box">수납함 비움</label>
+      <label class="chk-opt"><input type="checkbox" name="act" value="inlet">입구 이물질 제거</label>
+      <label class="chk-opt"><input type="checkbox" name="act" value="cover">덮개·장애물 치움</label>
+      <label class="chk-opt"><input type="checkbox" name="act" value="check">점검만 함 (이상 없음)</label>
+      <label class="chk-opt"><input type="checkbox" name="act" value="repair">고장 · 수리 필요</label>
+    </fieldset>
+    <p class="rec-err" id="recErr" hidden>한 일을 하나 이상 골라 주세요.</p>
+    <div><label class="fl" for="recMemo">메모 (선택)</label><textarea id="recMemo" rows="3" maxlength="200" placeholder="예) 낙엽이 많아 수납함 2개 모두 비움"></textarea></div>
+    <div><label class="fl" for="recWho">담당자 (선택)</label><input type="text" id="recWho" maxlength="20" autocomplete="name" placeholder="예) 김현장"></div>
+    <p class="rec-note">기록하면 바로 "정상"이 되지 않고 <b>조치 확인 대기</b>로 바뀝니다. 센서가 다음 값을 보내 정상으로 확인되면 정상으로 돌아가고, 여전히 이상하면 다시 알립니다.</p>
+    <div class="rec-btns"><button type="button" class="btn" id="recCancel">취소</button><button type="submit" class="btn primary" id="recOk">기록하기</button></div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <footer class="site-footer">
   <div class="container">
@@ -634,6 +726,7 @@
     size = size || 14;
     var inner = st === "off" ? '<circle cx="7" cy="7" r="4.6" fill="none" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="2.4 1.6"/>'
       : st === "crit" ? '<rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="var(--crit-icon)"/>'
+      : st === "chk" ? '<circle cx="7" cy="7" r="6.2" fill="var(--info-icon)"/><path d="M7 3.6V7l2.4 1.6" fill="none" stroke="var(--surface)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>'
       : st === "warn" ? '<polygon points="7,1.2 13.2,12.4 0.8,12.4" fill="var(--warn-icon)" stroke="#1e2124" stroke-width=".8" stroke-linejoin="round"/><path d="M7 5.2v3.6" stroke="#1e2124" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="10.6" r=".9" fill="#1e2124"/>'
       : '<circle cx="7" cy="7" r="3.8" fill="var(--ok-icon)"/>';
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" aria-hidden="true">' + inner + '</svg>';
@@ -642,12 +735,18 @@
 
   // ---------- 상수 ----------
   var REAL_UNIT_ID = "GA-001";
+  var ACT_LABEL = {box:"수납함 비움", inlet:"입구 이물질 제거", cover:"덮개·장애물 치움", check:"점검만 함", repair:"수리 필요"};
+  var VERIFY_TICKS = 3;                  // 가상 장치: 기록 뒤 센서 값 3번(약 12초)을 보고 판단
+  var VERIFY_TIMEOUT_MS = 10 * 60000;    // 실측 장치: 10분 안에 새 값이 없으면 "확인 못 함"
+  var records = [];                      // 현장 조치 기록 (서버 연결 전: 이 브라우저에만 저장)
+  try { records = JSON.parse(localStorage.getItem("fieldRecords") || "[]") || []; } catch(e){ records = []; }
+  if (!Array.isArray(records)) records = [];
 
   // ---------- ThingSpeak (GA-001 실측값) ----------
   // ---------- 브이월드 배경지도 ----------
   // 브이월드(국토교통부) 인증키. "brachiosaurus-team.github.io" 주소에서만 작동하도록 등록된 개발키를 넣으세요.
   // 비워 두거나 키가 작동하지 않으면 오픈스트리트맵으로 자동 전환돼요.
-  var VWORLD_KEY = "C3655FE7-C737-4261-AE14-6447DC34B951";
+  var VWORLD_KEY = "여기에_브이월드_키";
   var TS_CHANNEL_ID = 3570123;
   var TS_READ_KEY = "";          // 채널이 비공개면 Read API Key를 넣기 (공개 채널이면 비워둠)
   var TS_POLL_MS = 15000;        // 15초마다 새 값 확인
@@ -802,13 +901,16 @@
     return [px, py];
   }
 
-  function statusOf(u){
+  // 현장 조치를 기록하면 센서가 확인할 때까지 "조치 확인 대기"(chk)
+  function statusOf(u){ return u.verify ? "chk" : baseStatus(u); }
+  function baseStatus(u){
     if (u.real && u.offline) return "off";
     if (u.tier === "OVERFLOW" || u.full1 || u.full2) return "crit";
     if (u.tier === "TIER1" || u.fill1 >= 80 || u.fill2 >= 80) return "warn";
     return "good";
   }
   function reasonOf(u){
+    if (u.verify) return "조치 기록됨 · 센서 확인 중";
     if (u.real && u.offline) return u.everData ? "1분 넘게 새 값 없음" : "실측값 대기 중";
     if (u.tier === "OVERFLOW") return "마지노선 수위 · 입구 차단";
     if (u.full1 && u.full2) return "수납함 1·2 가득 참";
@@ -819,8 +921,8 @@
     if (u.fill2 >= 80) return "수납함2 " + Math.round(u.fill2) + "%";
     return "";
   }
-  var LABEL = {good:"정상", warn:"주의", crit:"위험", off:"통신 끊김"};
-  var SEV = {crit:0, off:1, warn:2, good:3};
+  var LABEL = {good:"정상", warn:"주의", crit:"위험", off:"통신 끊김", chk:"조치 확인 대기"};
+  var SEV = {crit:0, off:1, warn:2, chk:3, good:4};
 
   // 상태 변화 기록 (상황실 "최근 상태 변화", 이력 "오늘" 칸에 사용)
   var events = [];
@@ -830,9 +932,13 @@
   events.sort(function(a,b){ return a.t - b.t; });
   function setStatus(u, st, t){
     if (st === u.status) return;
-    events.push({t:t, id:u.id, dong:u.dong, from:u.status, to:st, why: st === "good" ? "정상 복귀" : reasonOf(u)});
+    var why = st === "good" ? (u.status === "chk" ? "조치 확인 · 정상 복귀" : "정상 복귀")
+            : st === "chk" ? "현장 조치 기록 · 센서 확인 중"
+            : (u.status === "chk" ? "조치 후에도 이상 · " : "") + reasonOf(u);
+    events.push({t:t, id:u.id, dong:u.dong, from:u.status, to:st, why:why});
     if (events.length > 200) events.shift();
     u.status = st; u.since = t;
+    if (st === "good") u.dispatch = null;
   }
 
   function durText(u){
@@ -872,6 +978,8 @@
       tsInfo.ok = true; tsInfo.error = "";
       if (d && typeof d === "object" && d.created_at) applyReal(byId[REAL_UNIT_ID], d);
       else tsInfo.error = "";
+      var ru = byId[REAL_UNIT_ID];
+      if (ru.verify && ru.everData && ru.entryId > ru.verify.entry) finishVerify(ru, "sensor");   // 기록 뒤 처음 들어온 실측값으로 판단
       checkOffline(); render();
     }).catch(function(err){
       tsInfo.ok = false;
@@ -884,6 +992,7 @@
     var waterA = num(d.field1), tier = num(d.field3), full = num(d.field6);
     u.everData = true;
     u.updated = new Date(d.created_at);
+    u.entryId = num(d.entry_id);
     u.level = waterA / 100 * WATER_A_CM;       // 센서 B 설치 전: 센서 A(0~4cm) 값만 반영
     u.tier = tier >= 2 ? "OVERFLOW" : (tier >= 1 ? "TIER1" : "NORMAL");
     u.overflowBySensorA = tier >= 2;           // 지금은 센서 A 맨 위를 마지노선으로 판단
@@ -895,6 +1004,7 @@
   function checkOffline(){
     var u = byId[REAL_UNIT_ID];
     u.offline = !u.everData || (Date.now() - u.updated.getTime() > OFFLINE_MS);
+    if (u.verify && Date.now() - u.verify.ts > VERIFY_TIMEOUT_MS){ finishVerify(u, "timeout"); return; }
     setStatus(u, statusOf(u), Date.now());
   }
 
@@ -920,8 +1030,9 @@
     if (prev === "NORMAL" && u.tier === "TIER1"){ u.tier1At = t; u.riseSeconds = null; }
     if (prev === "TIER1" && u.tier === "OVERFLOW" && u.tier1At) u.riseSeconds = Math.round((t - u.tier1At) / 1000);
 
-    setStatus(u, statusOf(u), t);
     u.updated = new Date();
+    if (u.verify && ++u.verify.ticks >= VERIFY_TICKS){ finishVerify(u, "sensor"); return; }
+    setStatus(u, statusOf(u), t);
   }
 
   // ---------- 모니터링 화면 ----------
@@ -971,6 +1082,8 @@
       s += '<polygon points="' + x + ',' + (y - 7 * k) + ' ' + (x + 6.5 * k) + ',' + (y + 5 * k) + ' ' + (x - 6.5 * k) + ',' + (y + 5 * k) + '" fill="var(--warn-icon)"/>';
     } else if (u.status === "off"){
       s += '<circle cx="' + x + '" cy="' + y + '" r="' + (5.5 * k) + '" fill="var(--map)" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="3 2"/>';
+    } else if (u.status === "chk"){
+      s += '<circle cx="' + x + '" cy="' + y + '" r="' + (5.5 * k) + '" fill="var(--info-icon)"/>';
     } else {
       s += '<circle cx="' + x + '" cy="' + y + '" r="3.6" fill="var(--ok-icon)"/>';
       return big ? s : '<g data-id="' + u.id + '"><title>' + u.id + ' ' + esc(u.dong) + ' · 정상</title>' + s + '<circle cx="' + x + '" cy="' + y + '" r="10" fill="transparent"/></g>';
@@ -1004,7 +1117,9 @@
         '<div class="track"><div class="fill ' + cls + '" style="width:' + clamp(v,0,100) + '%"></div></div>' +
         (full ? '<span class="full-flag">가득 참 · 입구 차단</span>' : '') + '</div>';
     }
-    var logs = actionLog.filter(function(l){ return l.id === u.id; }).slice(-3).reverse();
+    var logs = actionLog.filter(function(l){ return l.id === u.id; })
+      .concat(records.filter(function(r){ return r.id === u.id; }).map(function(r){ return {ts:r.ts, time:fmtTime(new Date(r.ts)), text:recordText(r)}; }))
+      .sort(function(a, b){ return a.ts - b.ts; }).slice(-3).reverse();
     el.innerHTML =
       '<div class="detail-top"><div><h2 id="hDetail">' + esc(u.dong) + ' <span class="num">' + u.id + '</span></h2>' +
         '<p class="detail-src">' + sourceText(u) + ' · 마지막 갱신 <span class="num">' + fmtTime(u.updated) + '</span></p>' +
@@ -1021,8 +1136,10 @@
       '<div class="boxes">' + boxMeter(1, u.fill1, u.full1) + boxMeter(2, u.fill2, u.full2) + '</div>' +
       (u.real && u.everData ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + '</p>' : '') +
       '<div class="actions">' +
-        '<button type="button" class="btn primary" data-act="dispatch">현장 확인 요청하기</button>' +
-        '<button type="button" class="btn secondary" data-act="clean">청소 완료 처리하기</button>' +
+        (u.dispatch ? '<button type="button" class="btn primary" disabled aria-disabled="true">출동 요청됨 · ' + hhmm(u.dispatch.ts) + '</button>'
+                    : '<button type="button" class="btn primary" data-act="dispatch"' + (u.status === "good" || u.verify ? ' disabled aria-disabled="true"' : '') + '>현장 출동 요청</button>') +
+        (u.verify ? '<button type="button" class="btn secondary" disabled aria-disabled="true">센서 확인 중</button>'
+                  : '<button type="button" class="btn secondary" data-act="record">조치 결과 기록</button>') +
       '</div>' +
       '<ul class="log">' + (logs.length ? logs.map(function(l){ return '<li><time>' + l.time + '</time>' + l.text + '</li>'; }).join("") : '<li>아직 조치 기록이 없습니다.</li>') + '</ul>';
   }
@@ -1091,6 +1208,182 @@
     }).join("");
   }
 
+  // ---------- 현장 조치 기록 ----------
+  // 담당자가 "조치 결과 기록"을 남기면 바로 정상 처리하지 않고 "조치 확인 대기"로 두었다가,
+  // 센서가 다음 값을 보내 정상이면 확인 완료, 아니면 "조치 후에도 이상"으로 다시 알린다.
+  // 서버(Apps Script) 연결 전까지는 이 브라우저에만 저장된다.
+  function recordText(r){
+    var s = "조치 기록 · " + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + " (" + esc(r.who) + ")";
+    if (r.result === "wait") return s + " → 센서 확인 중";
+    if (r.result === "ok") return s + " → 정상 확인 " + hhmm(r.doneAt);
+    if (r.result === "fail") return s + " → 조치 후에도 이상: " + esc(r.after);
+    return s + " → 확인 못 함: " + esc(r.after);
+  }
+  function saveRecords(){ try { localStorage.setItem("fieldRecords", JSON.stringify(records.slice(-200))); } catch(e){} }
+  function finishVerify(u, how){
+    var r = null;
+    for (var i = records.length - 1; i >= 0; i--){ if (records[i].rid === u.verify.rid){ r = records[i]; break; } }
+    u.verify = null;
+    var base = baseStatus(u), now = Date.now();
+    if (r){
+      r.doneAt = now; r.afterSt = base;
+      if (base === "good"){ r.result = "ok"; r.after = "정상"; }
+      else if (base === "off" || how === "timeout"){ r.result = "lost"; r.after = how === "timeout" ? "10분 동안 센서 값이 오지 않음" : "센서 통신 끊김"; }
+      else { r.result = "fail"; r.after = LABEL[base] + " · " + reasonOf(u) + (r.acts.indexOf("repair") >= 0 ? " (수리 필요로 기록됨)" : ""); }
+      saveRecords();
+      if (r.result !== "ok") toast(u.id + " " + (r.result === "fail" ? "조치 후에도 이상: " : "확인 못 함: ") + r.after);
+    }
+    setStatus(u, statusOf(u), now);
+  }
+  // 가상 장치: 기록한 조치를 시뮬레이션 값에 반영 (실측 장치는 실제 센서 값으로만 판단)
+  function applyActsSim(u, acts){
+    if (acts.indexOf("box") >= 0){ u.fill1 = 3 + rand() * 5; u.fill2 = 3 + rand() * 5; u.full1 = false; u.full2 = false; }
+    if ((acts.indexOf("inlet") >= 0 || acts.indexOf("cover") >= 0) && u.tier !== "NORMAL"){
+      u.level = 0.12; u.target = 0.08; u.tier = "NORMAL"; u.riseSeconds = null;   // 입구가 뚫려 물이 빠짐
+    }
+  }
+  var recFor = null, recOpener = null;
+  var recDlg = document.getElementById("recDlg");
+  function openRecord(id, opener){
+    var u = byId[id]; if (!u || u.verify) return;
+    recFor = id; recOpener = opener || null;
+    document.getElementById("recDev").innerHTML = '<b>' + u.id + ' ' + esc(u.dong) + '</b> · ' + LABEL[u.status] + (reasonOf(u) ? ' · ' + reasonOf(u) : '');
+    document.querySelectorAll('#recActs input').forEach(function(c){ c.checked = false; });
+    document.getElementById("recActs").removeAttribute("aria-invalid");
+    document.getElementById("recErr").hidden = true;
+    document.getElementById("recMemo").value = "";
+    var who = ""; try { who = localStorage.getItem("fieldWho") || ""; } catch(e){}
+    document.getElementById("recWho").value = who;
+    var ok = document.getElementById("recOk"); ok.disabled = false; ok.textContent = "기록하기";
+    if (recDlg.showModal) recDlg.showModal(); else recDlg.setAttribute("open", "");
+    document.querySelector('#recActs input').focus();
+  }
+  function closeRecord(){
+    if (recDlg.open){ if (recDlg.close) recDlg.close(); else recDlg.removeAttribute("open"); }
+  }
+  recDlg.addEventListener("close", function(){
+    var o = recOpener; recOpener = null;
+    if (o && document.body.contains(o)) o.focus();
+  });
+  document.getElementById("recCancel").addEventListener("click", closeRecord);
+  document.getElementById("recActs").addEventListener("change", function(){   // 고르면 오류 안내를 바로 지움
+    if (document.querySelector('#recActs input:checked')){
+      document.getElementById("recActs").removeAttribute("aria-invalid");
+      document.getElementById("recErr").hidden = true;
+    }
+  });
+  document.getElementById("recForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var ok = document.getElementById("recOk");
+    if (ok.disabled) return;   // 두 번 누름 방지
+    var acts = [].slice.call(document.querySelectorAll('#recActs input:checked')).map(function(c){ return c.value; });
+    if (!acts.length){
+      document.getElementById("recActs").setAttribute("aria-invalid", "true");
+      document.getElementById("recErr").hidden = false;
+      document.querySelector('#recActs input').focus();
+      return;
+    }
+    var u = byId[recFor]; if (!u){ closeRecord(); return; }
+    var who = document.getElementById("recWho").value.trim();
+    try { localStorage.setItem("fieldWho", who); } catch(err){}
+    ok.disabled = true; ok.textContent = "기록하는 중…";
+    setTimeout(function(){
+      var now = Date.now();
+      var r = {rid:now + "-" + u.id, id:u.id, dong:u.dong, ts:now, who:who || "현장 담당자", acts:acts,
+               memo:document.getElementById("recMemo").value.trim(), beforeSt:u.status, before:reasonOf(u), since:u.since, result:"wait"};
+      records.push(r); saveRecords();
+      if (!u.real) applyActsSim(u, acts);
+      u.dispatch = null;
+      u.verify = {rid:r.rid, ts:now, ticks:0, entry:u.entryId || 0};
+      setStatus(u, statusOf(u), now);
+      closeRecord();
+      toast(u.id + " 조치를 기록했어요. 센서 확인을 기다리는 중이에요.");
+      render();
+    }, 400);
+  });
+  var toastTimer = null;
+  function toast(msg){
+    var el = document.getElementById("toast");
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 5000);
+  }
+  // 새로고침 전 기록 불러오기: 오늘 것만. 확인 중이던 실측 장치는 이어서 확인, 가상 장치는 시뮬레이션이 새로 시작돼 "확인 못 함"
+  (function(){
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    records = records.filter(function(r){ return r && r.ts >= today.getTime() && r.acts; });
+    records.forEach(function(r){
+      if (r.result !== "wait") return;
+      var u = byId[r.id];
+      if (u && u.real && Date.now() - r.ts < VERIFY_TIMEOUT_MS && !u.verify){ u.verify = {rid:r.rid, ts:r.ts, ticks:0, entry:0}; setStatus(u, "chk", r.ts); }
+      else { r.result = "lost"; r.after = "화면을 새로 열어 시뮬레이션이 다시 시작됨"; r.doneAt = Date.now(); }
+    });
+    saveRecords();
+  })();
+
+  // ---------- 현장 화면 ----------
+  var fTab = "need", fListHtml = "";
+  function kakaoTo(u){ return "https://map.kakao.com/link/to/" + encodeURIComponent(u.id + " " + u.dong) + "," + u.ll[0] + "," + u.ll[1]; }
+  function sinceText(t){ var m = Math.floor((Date.now() - t) / 60000); return m < 1 ? "방금" : (m < 60 ? m + "분 전" : Math.floor(m / 60) + "시간 " + (m % 60) + "분 전"); }
+  function renderField(){
+    var need = units.filter(function(u){ return u.status !== "good" && u.status !== "chk"; })
+      .sort(function(a, b){ return ((b.dispatch ? 1 : 0) - (a.dispatch ? 1 : 0)) || (SEV[a.status] - SEV[b.status]) || (a.since - b.since); });
+    var chk = units.filter(function(u){ return u.status === "chk"; });
+    var done = records.filter(function(r){ return r.result !== "wait"; }).slice().reverse();
+    var req = need.filter(function(u){ return u.dispatch; }).length;
+    document.getElementById("fClock").textContent = hhmm(Date.now());
+    var tabN = {need:need.length, chk:chk.length, done:done.length};
+    document.querySelectorAll("#fTabs button").forEach(function(b){
+      var k = b.getAttribute("data-tab");
+      b.textContent = {need:"조치 필요", chk:"확인 대기", done:"오늘 기록"}[k] + " " + tabN[k];
+    });
+    var hint = {need:(req ? "출동 요청 " + req + "대 · " : "") + "출동 요청 먼저, 위험 → 통신 끊김 → 주의, 오래된 순", chk:"센서가 다음 값을 보내면 자동으로 확인됩니다", done:"오늘 이 기기에서 남긴 기록 (서버 연결 전)"}[fTab];
+    document.getElementById("fHint").textContent = hint;
+    var html;
+    if (fTab === "need"){
+      html = need.length ? need.map(function(u){
+        return '<li class="f-card ' + u.status + '">' +
+          '<div class="f-top">' + badge(u.status) + '<span class="f-dur">' + durText(u) + '</span></div>' +
+          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + (u.dispatch ? '<span class="f-tag">출동 요청됨</span>' : '') + '</h2>' +
+          '<p class="f-why">' + reasonOf(u) + '</p>' +
+          '<p class="f-meta">' + (u.real ? "실증 장치" : "가상 장치") + ' · ' + esc(u.basis || "") + '</p>' +
+          '<div class="f-btns"><a class="btn" href="' + kakaoTo(u) + '" target="_blank" rel="noopener">길찾기<span class="sr-only"> (카카오맵, 새 창)</span></a>' +
+          '<button type="button" class="btn primary" data-rec="' + u.id + '">조치 결과 기록</button></div></li>';
+      }).join("") : '<li class="f-empty">지금은 조치가 필요한 장치가 없어요.</li>';
+    } else if (fTab === "chk"){
+      html = chk.length ? chk.map(function(u){
+        var r = null; records.forEach(function(x){ if (u.verify && x.rid === u.verify.rid) r = x; });
+        return '<li class="f-card chk">' +
+          '<div class="f-top">' + badge("chk") + '<span class="f-dur">' + (r ? sinceText(r.ts) + ' 기록' : '') + '</span></div>' +
+          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + '</h2>' +
+          (r ? '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
+               '<p class="f-meta">' + hhmm(r.ts) + ' · ' + esc(r.who) + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
+               '<p class="f-meta">조치 전: ' + LABEL[r.beforeSt] + (r.before ? ' · ' + esc(r.before) : '') + '</p>' : '') +
+          '<p class="f-meta">' + (u.real ? "실측 장치는 다음 전송(약 15~20초 간격)을 기다립니다." : "가상 장치는 약 10초 뒤 확인됩니다.") + '</p></li>';
+      }).join("") : '<li class="f-empty">확인을 기다리는 기록이 없어요.</li>';
+    } else {
+      html = done.length ? done.map(function(r){
+        var u = byId[r.id];
+        var b = r.result === "ok" ? badge("good", "정상 확인") : (r.result === "fail" ? badge(r.afterSt || "warn", "조치 후에도 이상") : badge("off", "확인 못 함"));
+        var again = r.result !== "ok" && u && u.status !== "good" && u.status !== "chk" && !records.some(function(x){ return x.id === r.id && x.ts > r.ts; });
+        return '<li class="f-card ' + (r.result === "ok" ? "good" : (r.result === "fail" ? (r.afterSt || "warn") : "off")) + '">' +
+          '<div class="f-top">' + b + '<span class="f-dur">' + hhmm(r.ts) + ' 기록 → ' + hhmm(r.doneAt) + '</span></div>' +
+          '<h2 class="f-title"><span class="num">' + r.id + '</span> ' + esc(r.dong) + '</h2>' +
+          '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
+          '<p class="f-meta">' + esc(r.who) + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
+          '<p class="f-meta">결과: ' + esc(r.after || "") + '</p>' +
+          (again ? '<div class="f-btns"><button type="button" class="btn primary" data-rec="' + r.id + '">다시 조치 결과 기록</button></div>' : '') + '</li>';
+      }).join("") : '<li class="f-empty">오늘 남긴 기록이 없어요.</li>';
+    }
+    if (html !== fListHtml){ fListHtml = html; document.getElementById("fList").innerHTML = html; }   // 바뀔 때만 다시 그려 누르는 중인 버튼이 사라지지 않게
+  }
+  document.getElementById("fTabs").addEventListener("click", function(e){
+    var b = e.target.closest("[data-tab]"); if (!b) return;
+    fTab = b.getAttribute("data-tab"); setPressed("fTabs", b); renderField();
+  });
+  document.getElementById("fList").addEventListener("click", function(e){
+    var b = e.target.closest("[data-rec]"); if (b) openRecord(b.getAttribute("data-rec"), b);
+  });
+
   // 전체 화면에서 목록이 칸을 넘치면 넘치는 장치를 숨기고 "외 N대"로 알림
   function fitOpsList(total){
     var ul = document.getElementById("oList");
@@ -1154,8 +1447,10 @@
     history = history.filter(function(r){ return r.t < T0; });
   })();
 
-  var KIND = {crit:"위험", warn:"주의", clean:"청소", recover:"정상 복귀", dispatch:"확인 요청", off:"통신 끊김"};
-  var KIND_BADGE = {crit:"crit", warn:"warn", clean:"info", recover:"good", dispatch:"info", off:"off"};
+  var KIND = {crit:"위험", warn:"주의", clean:"조치 완료", recover:"정상 복귀", dispatch:"출동 요청", off:"통신 끊김",
+              chk:"조치 확인 대기", fail:"조치 후 이상", lost:"확인 못 함"};
+  var KIND_BADGE = {crit:"crit", warn:"warn", clean:"info", recover:"good", dispatch:"info", off:"off", chk:"chk", fail:"warn", lost:"off"};
+  var ACTION_TYPES = {clean:1, dispatch:1, fail:1, lost:1};   // "조치" 필터에 함께 보이는 종류
   var hFilter = {kind:"all", id:""};
 
   function allRecords(){
@@ -1163,7 +1458,13 @@
       return {t:e.t, id:e.id, dong:e.dong, type: e.to === "good" ? "recover" : e.to, why:e.why};
     });
     var acts = actionLog.map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id].dong, type:l.kind, why:l.text}; });
-    return history.concat(today, acts).sort(function(a,b){ return b.t - a.t; });
+    // 현장 조치 기록: 센서로 확인된 결과만 (확인 중인 것은 상태 변화 "조치 확인 대기"로 보임)
+    var field = records.filter(function(r){ return r.result !== "wait"; }).map(function(r){
+      var what = r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + " (" + r.who + ")" + (r.memo ? " · " + r.memo : "");
+      if (r.result === "ok") return {t:r.doneAt, id:r.id, dong:r.dong, type:"clean", why:"현장 조치 · 센서로 정상 확인 · " + what, resp: r.since ? r.doneAt - r.since : null};
+      return {t:r.doneAt, id:r.id, dong:r.dong, type:r.result, why:what + " → " + (r.after || "")};
+    });
+    return history.concat(today, acts, field).sort(function(a,b){ return b.t - a.t; });
   }
   function fmtDur(ms){ var m = Math.round(ms / 60000); return m < 60 ? m + "분" : Math.floor(m / 60) + "시간 " + (m % 60) + "분"; }
   function md(t){ var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate(); }
@@ -1181,8 +1482,8 @@
     document.getElementById("hTiles").innerHTML =
       '<li class="tile"><span class="l">' + icon("crit", 16) + '위험 발생</span><span class="v num">' + n.crit + '</span><span class="s">30일 합계</span></li>' +
       '<li class="tile"><span class="l">' + icon("warn", 16) + '주의 발생</span><span class="v num">' + n.warn + '</span><span class="s">30일 합계</span></li>' +
-      '<li class="tile"><span class="l">청소 완료</span><span class="v num">' + n.clean + '</span><span class="s">현장 출동 + 정기 청소</span></li>' +
-      '<li class="tile"><span class="l">평균 대응 시간</span><span class="v num" style="font-size:2rem">' + (respN ? fmtDur(respSum / respN) : "-") + '</span><span class="s">위험 발생 → 청소 완료</span></li>';
+      '<li class="tile"><span class="l">조치 완료</span><span class="v num">' + n.clean + '</span><span class="s">현장 조치 확인 + 정기 청소</span></li>' +
+      '<li class="tile"><span class="l">평균 대응 시간</span><span class="v num" style="font-size:2rem">' + (respN ? fmtDur(respSum / respN) : "-") + '</span><span class="s">이상 발생 → 조치 확인</span></li>';
 
     var days = [];
     for (var d = 0; d < 30; d++) days.push({warn:0, crit:0, rain: d < 29 ? (RAIN[d] || 0) : TODAY_RAIN, start: T0 - (29 - d) * DAY});
@@ -1233,7 +1534,7 @@
     }).join("");
 
     var rows = recs.filter(function(r){
-      if (hFilter.kind !== "all" && r.type !== hFilter.kind) return false;
+      if (hFilter.kind === "clean" ? !ACTION_TYPES[r.type] : (hFilter.kind !== "all" && r.type !== hFilter.kind)) return false;
       if (hFilter.id && r.id !== hFilter.id) return false;
       return true;
     });
@@ -1262,6 +1563,10 @@
       s += '<polygon points="' + c + ',' + (c - 9 * k) + ' ' + (c + 8.5 * k) + ',' + (c + 6.5 * k) + ' ' + (c - 8.5 * k) + ',' + (c + 6.5 * k) + '" fill="var(--warn-icon)" stroke="#1e2124" stroke-width="1.2" stroke-linejoin="round"/>' +
            '<path d="M' + c + ' ' + (c - 3.6 * k) + 'v' + (4.6 * k) + '" stroke="#1e2124" stroke-width="' + (1.8 * k) + '" stroke-linecap="round"/>' +
            '<circle cx="' + c + '" cy="' + (c + 3.8 * k) + '" r="' + (1.1 * k) + '" fill="#1e2124"/>';
+    } else if (u.status === "chk"){
+      // 조치 확인 대기: 파란 원 + 시계 바늘, 흰 테두리
+      s += '<circle cx="' + c + '" cy="' + c + '" r="' + (7 * k) + '" fill="var(--info-icon)" stroke="#ffffff" stroke-width="2.5"/>' +
+           '<path d="M' + c + ' ' + (c - 4 * k) + 'V' + c + 'l' + (2.8 * k) + ' ' + (1.8 * k) + '" fill="none" stroke="var(--surface)" stroke-width="' + (1.8 * k) + '" stroke-linecap="round" stroke-linejoin="round"/>';
     } else if (u.status === "off"){
       // 통신 끊김: 어떤 바탕 지도에서도 보이게 흰 테두리 + 진한 점선 원
       s += '<circle cx="' + c + '" cy="' + c + '" r="' + (6.5 * k) + '" fill="#ffffff" stroke="#ffffff" stroke-width="3"/>' +
@@ -1392,7 +1697,7 @@
       o.key = key;
       var ic = markerSvg(u, st.big, sel);
       o.m.setIcon(L.divIcon({className:"mk", html:ic.html, iconSize:[ic.w, ic.w], iconAnchor:[ic.w / 2, ic.w / 2]}));
-      o.m.setZIndexOffset((3 - SEV[u.status]) * 1000 + (sel ? 5000 : 0));
+      o.m.setZIndexOffset((4 - SEV[u.status]) * 1000 + (sel ? 5000 : 0));
       o.m.unbindTooltip();
       var tip = u.id + " " + u.dong + " · " + LABEL[u.status] + (u.real ? " (실제 장치)" : "");
       o.w = ic.w;
@@ -1448,10 +1753,10 @@
   function refreshMaps(){ Object.keys(maps).forEach(function(k){ if (!document.getElementById(k).closest("[hidden]")) fitIfNeeded(maps[k]); }); }
 
   function render(){
-    var counts = {good:0, warn:0, crit:0, off:0};
+    var counts = {good:0, warn:0, crit:0, off:0, chk:0};
     units.forEach(function(u){ counts[u.status]++; });
     var att = attentionList();
-    document.getElementById("tTotalS").textContent = "관악구 21개 동" + (counts.off ? " · 통신 끊김 " + counts.off + "대" : "");
+    document.getElementById("tTotalS").textContent = "관악구 21개 동" + (counts.off ? " · 통신 끊김 " + counts.off + "대" : "") + (counts.chk ? " · 조치 확인 대기 " + counts.chk + "대" : "");
     document.getElementById("tsErr").textContent = tsInfo.ok === false ? "지금 ThingSpeak에서 값을 읽지 못하고 있습니다: " + tsInfo.error : "";
     if (!selectedId || !byId[selectedId]) selectedId = att.length ? att[0].id : REAL_UNIT_ID;
     renderCritical(counts);
@@ -1462,6 +1767,7 @@
     renderTable();
     renderOps(counts, att);
     if (view === "history") renderHistory();
+    if (view === "field") renderField();
     document.getElementById("clock").textContent = fmtTime(new Date());
   }
 
@@ -1503,17 +1809,19 @@
   // ---------- 화면 전환 (#pc / #ops / #history) ----------
   function applyView(){
     var h = location.hash;
-    view = h === "#ops" ? "ops" : (h === "#history" ? "history" : "pc");
+    view = h === "#ops" ? "ops" : (h === "#history" ? "history" : (h === "#field" ? "field" : "pc"));
     document.getElementById("opsView").hidden = view !== "ops";
     document.getElementById("pcView").hidden = view !== "pc";
     document.getElementById("histView").hidden = view !== "history";
-    [["navPc","pc"],["navOps","ops"],["navHist","history"]].forEach(function(p){
+    document.getElementById("fieldView").hidden = view !== "field";
+    [["navPc","pc"],["navOps","ops"],["navHist","history"],["navField","field"]].forEach(function(p){
       var el = document.getElementById(p[0]);
       if (view === p[1]) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
     });
     applyMode();
     document.getElementById("oClock").textContent = fmtTime(new Date());
     if (view === "history") renderHistory();
+    if (view === "field") renderField();
   }
   // 메뉴를 옮기면 새 페이지처럼 맨 위부터 보여 준다
   window.addEventListener("hashchange", function(){ applyView(); window.scrollTo(0, 0); });
@@ -1526,6 +1834,11 @@
   });
   document.getElementById("caLink").addEventListener("click", function(e){
     e.preventDefault();
+    if (view === "field"){   // 현장 화면에서는 현장 목록(조치 필요)으로
+      fTab = "need"; setPressed("fTabs", document.querySelector('#fTabs [data-tab="need"]')); renderField();
+      document.getElementById("fTabs").scrollIntoView({behavior:"smooth", block:"start"});
+      return;
+    }
     if (location.hash !== "#pc" && location.hash !== "") location.hash = "#pc";
     setTimeout(function(){
       var a = document.getElementById("attention");
@@ -1550,20 +1863,15 @@
     var b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
     var u = byId[selectedId]; if (!u) return;
     var act = b.getAttribute("data-act");
+    if (act === "record"){ openRecord(u.id, b); return; }
     b.disabled = true; b.textContent = "처리 중…";
     setTimeout(function(){
-      var t = fmtTime(new Date());
-      if (act === "dispatch"){
-        actionLog.push({id:u.id, time:t, ts:Date.now(), kind:"dispatch", text:"현장 확인 요청 보냄"});
-      } else if (u.real){
-        actionLog.push({id:u.id, time:t, ts:Date.now(), kind:"clean", text:"청소 완료 기록 (실측값은 센서가 다시 보내면 갱신)"});
-      } else {
-        u.fill1 = 5; u.fill2 = 5; u.full1 = false; u.full2 = false;
-        setStatus(u, statusOf(u), Date.now());
-        actionLog.push({id:u.id, time:t, ts:Date.now(), kind:"clean", text:"청소 완료 · 수납함 비움"});
-      }
+      var now = Date.now();
+      u.dispatch = {ts:now};
+      actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"현장 출동 요청 보냄"});
+      toast(u.id + " 현장 출동을 요청했어요. 현장 화면 맨 위에 표시돼요.");
       render();
-    }, 600);
+    }, 400);
   });
 
   function setPressed(groupId, btn){
@@ -1657,6 +1965,10 @@
   window.addEventListener("hashchange", function(){ setTimeout(refreshMaps, 0); });
   applyView();
   render();
+  // 휴대폰 홈 화면 앱(PWA): https 주소에서만 서비스워커 등록
+  if ("serviceWorker" in navigator && location.protocol === "https:"){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
   measureSticky();
   setTimeout(refreshMaps, 0);
   setInterval(function(){ units.forEach(step); render(); }, 4000);
