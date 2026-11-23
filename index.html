@@ -338,6 +338,9 @@
   @media (max-width:1023px){
     .body-grid,.tools,.hist-grid,.o-body{grid-template-columns:minmax(0,1fr)}
     .o-ev-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+    html.is-fs body{overflow:auto}
+    html.is-fs .ops{height:auto;min-height:calc(100vh - var(--crit-h, 56px))}
+    html.is-fs .o-map.livemap{height:60vh;min-height:320px}
   }
   @media (max-width:767px){
     .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -1079,6 +1082,7 @@
         '<span class="dur">' + durText(u).replace("째", "") + '<small>지속</small></span></li>';
     }).join("") + (att.length > 6 ? '<li class="o-more">외 ' + (att.length - 6) + '대는 모니터링 화면에서 확인</li>' : '')
       : '<li class="empty">모든 장치 정상</li>';
+    fitOpsList(att.length);
 
     var recent = events.slice(-4).reverse();
     document.getElementById("oEvents").innerHTML = recent.map(function(e){
@@ -1086,6 +1090,31 @@
         '<span>' + LABEL[e.from] + ' → ' + LABEL[e.to] + ' · ' + e.why + '</span></li>';
     }).join("");
   }
+
+  // 전체 화면에서 목록이 칸을 넘치면 넘치는 장치를 숨기고 "외 N대"로 알림
+  function fitOpsList(total){
+    var ul = document.getElementById("oList");
+    if (!ul) return;
+    var items = [].slice.call(ul.querySelectorAll(".o-item"));
+    items.forEach(function(li){ li.hidden = false; });
+    var more = ul.querySelector(".o-more");
+    var base = total - items.length;
+    if (more && base <= 0) more.remove(), more = null;
+    if (!document.documentElement.classList.contains("is-fs") || !items.length) {
+      if (more) more.textContent = "외 " + base + "대는 모니터링 화면에서 확인";
+      return;
+    }
+    if (!more) { more = document.createElement("li"); more.className = "o-more"; ul.appendChild(more); }
+    var side = ul.closest(".o-side"), limit = side.getBoundingClientRect().bottom - 24;
+    var hiddenN = 0;
+    more.textContent = "외 0대는 모니터링 화면에서 확인";
+    for (var i = items.length - 1; i > 0 && more.getBoundingClientRect().bottom > limit; i--) {
+      items[i].hidden = true; hiddenN++;
+      more.textContent = "외 " + (base + hiddenN) + "대는 모니터링 화면에서 확인";
+    }
+    if (base + hiddenN <= 0) more.remove();
+  }
+  function refitOpsList(){ fitOpsList(Number((document.getElementById("oListMeta").textContent || "0").replace(/\D/g, "")) || 0); }
 
   // ---------- 이력 ----------
   var DAY = 86400000;
@@ -1619,9 +1648,12 @@
     var cr = document.getElementById("critical");
     document.documentElement.style.setProperty("--crit-h", (cr && !cr.hidden ? cr.offsetHeight : 0) + "px");
     setTimeout(refreshMaps, 150); setTimeout(refreshMaps, 600);
+    setTimeout(refitOpsList, 200);
+    var fb = document.getElementById("oFull");
+    if (fb) fb.textContent = document.fullscreenElement ? "전체 화면 끝내기" : "전체 화면으로 보기";
   });
   var resizeTimer = null;
-  window.addEventListener("resize", function(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(refreshMaps, 250); });
+  window.addEventListener("resize", function(){ clearTimeout(resizeTimer); resizeTimer = setTimeout(function(){ refreshMaps(); refitOpsList(); }, 250); });
   window.addEventListener("hashchange", function(){ setTimeout(refreshMaps, 0); });
   applyView();
   render();
