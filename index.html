@@ -34,7 +34,7 @@
 
     --ok-text:#464c53; --ok-bg:#f4f5f6; --ok-border:#cdd1d5; --ok-icon:#6d7882;
     --off-text:#33363d; --off-bg:#e6e8ea; --off-icon:#58616a;
-    --warn-text:#8a5c00; --warn-bg:#fff3db; --warn-border:#ffe0a3; --warn-icon:#ffb114;
+    --warn-text:#8a5c00; --warn-bg:#fff3db; --warn-border:#ffe0a3; --warn-icon:#ffb114; --warn-line:#8a5c00;
     --warn-badge-bg:#ffb114; --warn-badge-text:#2e1f00;
     --crit-text:#bd2c0f; --crit-bg:#fdefec; --crit-border:#fcdfd9; --crit-icon:#de3412;
     --info-text:#096ab3; --info-bg:#e7f4fe; --info-border:#d3ebfd; --info-icon:#0b78cb;
@@ -56,7 +56,7 @@
        주의 = KRDS 선명 모드 토큰 그대로: 아이콘·배지(element.warning) warning-30 #ffb114 10.1:1, 글자(text.warning) warning-20 #ffc95c 12.1:1
        위험 = 토큰(danger-20 #f7afa1)은 분홍빛으로 흐려 보여 한두 단계 진하게: 아이콘 danger-40 #f05f42 5.6:1(아이콘 기준 4.5:1 이상),
               글자 danger-30 #f48771 7.5:1(레이블 기준 7:1 이상). KRDS도 선명 모드의 위험 요소·테두리에는 danger-50을 씀 */
-    --warn-text:#ffc95c; --warn-bg:#241800; --warn-border:#2e1f00; --warn-icon:#ffb114;
+    --warn-text:#ffc95c; --warn-bg:#241800; --warn-border:#2e1f00; --warn-icon:#ffb114; --warn-line:#ffb114;
     --warn-badge-bg:#ffb114; --warn-badge-text:#000000;
     --crit-text:#f48771; --crit-bg:#260903; --crit-border:#390d05; --crit-icon:#f05f42;
     --info-text:#9ed2fa; --info-bg:#021a2c; --info-border:#03253f; --info-icon:#9ed2fa;
@@ -249,7 +249,8 @@
   .livemap .mk{background:none;border:none}
   .livemap .mk svg{display:block;overflow:visible}
   .livemap .leaflet-tooltip.mk-tip{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:.875rem;padding:2px 8px}
-  .livemap .leaflet-tooltip.mk-label{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:none;font-weight:700;font-size:clamp(.8125rem,1vw,1.0625rem);padding:0 6px}
+  /* 장치 번호 표: 어떤 바탕 지도(야간·위성 포함)·어떤 화면 테마에서도 흰 바탕 + 검은 글씨 + 검은 테두리로 고정 */
+  .livemap .leaflet-tooltip.mk-label{background:#ffffff;color:#1e2124;border:1.5px solid #1e2124;border-radius:4px;box-shadow:0 0 0 2px rgba(255,255,255,.85);font-weight:700;font-size:clamp(.8125rem,1vw,1.0625rem);padding:0 6px}
   .livemap .leaflet-tooltip.mk-tip:before,.livemap .leaflet-tooltip.mk-label:before{display:none}
   .livemap .leaflet-control-attribution{font-size:.75rem;background:var(--surface);color:var(--text-2)}
   .livemap .leaflet-control-attribution a{color:var(--link)}
@@ -907,9 +908,9 @@
   function icon(st, size){
     size = size || 14;
     var inner = st === "off" ? '<circle cx="7" cy="7" r="4.6" fill="none" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="2.4 1.6"/>'
-      : st === "crit" ? '<rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="var(--crit-icon)"/>'
+      : st === "crit" ? '<rect x="2.3" y="2.3" width="9.4" height="9.4" rx=".6" transform="rotate(45 7 7)" fill="var(--crit-icon)"/><path d="M7 4.2v3.4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="9.7" r=".85" fill="#ffffff"/>'
       : st === "chk" ? '<circle cx="7" cy="7" r="6.2" fill="var(--info-icon)"/><path d="M7 3.6V7l2.4 1.6" fill="none" stroke="var(--surface)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>'
-      : st === "warn" ? '<polygon points="7,1.2 13.2,12.4 0.8,12.4" fill="var(--warn-icon)" stroke="#1e2124" stroke-width=".8" stroke-linejoin="round"/><path d="M7 5.2v3.6" stroke="#1e2124" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="10.6" r=".9" fill="#1e2124"/>'
+      : st === "warn" ? '<polygon points="7,1.6 12.9,12.2 1.1,12.2" fill="var(--warn-icon)" stroke="var(--warn-line)" stroke-width=".9" stroke-linejoin="round"/>'
       : '<circle cx="7" cy="7" r="3.8" fill="var(--ok-icon)"/>';
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" aria-hidden="true">' + inner + '</svg>';
   }
@@ -1868,9 +1869,10 @@
     if (!big && u.id === selectedId) s += '<circle cx="' + x + '" cy="' + y + '" r="13" fill="none" stroke="var(--link)" stroke-width="2.5"/>';
     if (u.status === "crit"){
       s += '<circle class="ring" cx="' + x + '" cy="' + y + '" r="' + (12 * k) + '" fill="none" stroke="var(--crit-icon)" stroke-width="2"/>' +
-           '<rect x="' + (x - 5.5 * k) + '" y="' + (y - 5.5 * k) + '" width="' + (11 * k) + '" height="' + (11 * k) + '" transform="rotate(45 ' + x + ' ' + y + ')" fill="var(--crit-icon)" stroke="var(--map)" stroke-width="1.5"/>';
+           '<rect x="' + (x - 5.5 * k) + '" y="' + (y - 5.5 * k) + '" width="' + (11 * k) + '" height="' + (11 * k) + '" transform="rotate(45 ' + x + ' ' + y + ')" fill="var(--crit-icon)" stroke="var(--map)" stroke-width="1.5"/>' +
+           '<path d="M' + x + ' ' + (y - 3.6 * k) + 'v' + (3.8 * k) + '" stroke="#ffffff" stroke-width="' + (1.8 * k) + '" stroke-linecap="round"/><circle cx="' + x + '" cy="' + (y + 3.4 * k) + '" r="' + (1.05 * k) + '" fill="#ffffff"/>';
     } else if (u.status === "warn"){
-      s += '<polygon points="' + x + ',' + (y - 7 * k) + ' ' + (x + 6.5 * k) + ',' + (y + 5 * k) + ' ' + (x - 6.5 * k) + ',' + (y + 5 * k) + '" fill="var(--warn-icon)"/>';
+      s += '<polygon points="' + x + ',' + (y - 7 * k) + ' ' + (x + 6.5 * k) + ',' + (y + 5 * k) + ' ' + (x - 6.5 * k) + ',' + (y + 5 * k) + '" fill="var(--warn-icon)" stroke="var(--warn-line)" stroke-width="1" stroke-linejoin="round"/>';
     } else if (u.status === "off"){
       s += '<circle cx="' + x + '" cy="' + y + '" r="' + (5.5 * k) + '" fill="var(--map)" stroke="var(--off-icon)" stroke-width="2" stroke-dasharray="3 2"/>';
     } else if (u.status === "chk"){
@@ -2925,14 +2927,15 @@
     if (sel) s += '<circle cx="' + c + '" cy="' + c + '" r="' + (13 * k) + '" fill="none" stroke="#ffffff" stroke-width="5" stroke-opacity=".85"/>' +   // 어두운 지도에서도 보이게 흰 테두리
                   '<circle cx="' + c + '" cy="' + c + '" r="' + (13 * k) + '" fill="none" stroke="var(--link)" stroke-width="2.5"/>';
     if (u.status === "crit"){
-      var d = 5.5 * k;
+      var d = 6.5 * k;
       s += '<circle class="ring" cx="' + c + '" cy="' + c + '" r="' + (12 * k) + '" fill="none" stroke="var(--crit-icon)" stroke-width="2"/>' +
-           '<rect x="' + (c - d) + '" y="' + (c - d) + '" width="' + (2 * d) + '" height="' + (2 * d) + '" transform="rotate(45 ' + c + ' ' + c + ')" fill="var(--crit-icon)" stroke="var(--surface)" stroke-width="1.5"/>';
+           '<rect x="' + (c - d) + '" y="' + (c - d) + '" width="' + (2 * d) + '" height="' + (2 * d) + '" transform="rotate(45 ' + c + ' ' + c + ')" fill="var(--crit-icon)" stroke="#ffffff" stroke-width="1.5"/>' +
+           '<path d="M' + c + ' ' + (c - 3.6 * k) + 'v' + (3.8 * k) + '" stroke="#ffffff" stroke-width="' + (1.8 * k) + '" stroke-linecap="round"/>' +   // 가장 급한 단계만 느낌표
+           '<circle cx="' + c + '" cy="' + (c + 3.4 * k) + '" r="' + (1.05 * k) + '" fill="#ffffff"/>';
     } else if (u.status === "warn"){
-      // 지도 바탕의 산 표시(회색 작은 삼각형)와 구분되게: 더 크게, 진한 테두리, 가운데 느낌표
-      s += '<polygon points="' + c + ',' + (c - 9 * k) + ' ' + (c + 8.5 * k) + ',' + (c + 6.5 * k) + ' ' + (c - 8.5 * k) + ',' + (c + 6.5 * k) + '" fill="var(--warn-icon)" stroke="#1e2124" stroke-width="1.2" stroke-linejoin="round"/>' +
-           '<path d="M' + c + ' ' + (c - 3.6 * k) + 'v' + (4.6 * k) + '" stroke="#1e2124" stroke-width="' + (1.8 * k) + '" stroke-linecap="round"/>' +
-           '<circle cx="' + c + '" cy="' + (c + 3.8 * k) + '" r="' + (1.1 * k) + '" fill="#1e2124"/>';
+      // 노란 삼각형. 밝은 바탕 지도에서도 3:1 이상 대비가 나도록 진한 노랑(갈색) 테두리 + 바깥 흰 띠
+      s += '<polygon points="' + c + ',' + (c - 8 * k) + ' ' + (c + 8 * k) + ',' + (c + 6 * k) + ' ' + (c - 8 * k) + ',' + (c + 6 * k) + '" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round" stroke-opacity=".9"/>' +
+           '<polygon points="' + c + ',' + (c - 8 * k) + ' ' + (c + 8 * k) + ',' + (c + 6 * k) + ' ' + (c - 8 * k) + ',' + (c + 6 * k) + '" fill="#ffb114" stroke="#8a5c00" stroke-width="1.4" stroke-linejoin="round"/>';
     } else if (u.status === "chk"){
       // 조치 확인 대기: 파란 원 + 시계 바늘, 흰 테두리. 센서가 아직 위험이면 위험 테두리도 함께
       var ab = alertSt(u);
