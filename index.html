@@ -515,7 +515,7 @@
   <section class="critical" role="banner" aria-label="긴급 공지" id="critical">
     <div class="container">
       <span class="ca-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 19 18H1z" fill="var(--crit-icon)"/><path d="M10 8v4.5" stroke="var(--crit-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="15" r="1.1" fill="var(--crit-bg)"/></svg>긴급</span>
-      <p class="ca-text" id="caText" aria-live="polite">호우주의보 발효 중(예시)</p>
+      <p class="ca-text" id="caText" aria-live="polite"></p>
       <a class="ca-link" href="#pc" id="caLink">조치 필요 목록 보기</a>
     </div>
   </section>
@@ -609,10 +609,12 @@
       <section class="card" aria-labelledby="hDemo">
         <div class="card-head"><h2 id="hDemo">시연 조작</h2><span class="sub">발표용</span></div>
         <div class="row">
-          <button type="button" class="btn" id="btnTrigger">가상 장치 GA-002 위험으로 바꾸기</button>
-          <button type="button" class="btn" id="btnReset">전체 정상으로 되돌리기</button>
+          <button type="button" class="btn" id="btnScenario">호우 시나리오 시작 (3시간)</button>
+          <button type="button" class="btn" id="btnStorm">GA-002 주변 국지성 폭우</button>
+          <button type="button" class="btn" id="btnTrigger">GA-002 수납함 가득 참 (즉시 위험)</button>
+          <button type="button" class="btn" id="btnReset">전체 정상으로 되돌리기 (즉시)</button>
         </div>
-        <p class="note">시연 조작과 조치 기록은 이 화면에서만 적용되며 새로고침하면 처음 상태로 돌아갑니다.</p>
+        <p class="note" id="demoNote">호우 시나리오: 3시간 동안 관악구 전체에 호우주의보 수준(3시간 약 60~75mm) 비가 와요. 국지성 폭우: GA-002 주변에 약 3분에 걸쳐 수위가 차올라 마지노선에서 입구를 막고, 10분 뒤 그쳐요. 수납함 가득 참: 사람이 「수납함 비움」을 기록할 때까지 위험이에요. 전체 정상: 모든 수납함과 입구를 비우고, 호우 시나리오를 끝내고 15분 동안 비를 멈춰요. 모두 모든 화면에 함께 적용돼요.</p>
       </section>
       <section class="card">
         <details>
@@ -819,7 +821,6 @@
   // ---------- 상수 ----------
   var REAL_UNIT_ID = "GA-001";
   var ACT_LABEL = {box:"수납함 비움", inlet:"입구 이물질 제거", cover:"덮개·장애물 치움", check:"점검만 함", repair:"수리 필요"};
-  var VERIFY_TICKS = 3;                  // 가상 장치: 기록 뒤 센서 값 3번(약 12초)을 보고 판단
   var VERIFY_TIMEOUT_MS = 10 * 60000;    // 실측 장치: 10분 안에 새 값이 없으면 "확인 못 함"
   var records = [];                      // 현장 조치 기록 (서버 연결 전: 이 브라우저에만 저장)
   try { records = JSON.parse(localStorage.getItem("fieldRecords") || "[]") || []; } catch(e){ records = []; }
@@ -865,35 +866,18 @@
   var seeded = rng(20261107);
   var rand = Math.random;
 
-  // ---------- 초기 시나리오: 호우주의보, 위험 2 / 주의 5 ----------
-  var INIT = {
-    0:{target:2.4, mins:14},
-    7:{target:9.7, mins:12, rise:46},
-    31:{target:0.1, f1:100, mins:4},
-    3:{target:2.5, mins:26},
-    18:{target:0.1, f2:86, mins:9},
-    26:{target:2.8, mins:41},
-    44:{target:2.2, mins:3}
-  };
+  // ---------- 장치 50대 (GA-001 실측 + 가상 49대). 가상 장치 값은 아래 시뮬레이션(SIM)이 채운다 ----------
   var now0 = Date.now();
   var units = [];
   for (var i = 0; i < 50; i++){
-    var init = INIT[i] || {};
     var u = {
-      id: "GA-" + String(i + 1).padStart(3, "0"),
+      id: "GA-" + String(i + 1).padStart(3, "0"), idx: i,
       dong: i === 0 ? "신림동" : DONGS[Math.floor(seeded() * DONGS.length)],
       real: i === 0, hasRealData: false, x: 0, y: 0,
-      target: init.target != null ? init.target : 0.05 + seeded() * 0.1,
-      fill1: init.f1 != null ? init.f1 : Math.round(8 + seeded() * 55),
-      fill2: init.f2 != null ? init.f2 : Math.round(6 + seeded() * 50),
-      riseSeconds: init.rise || null, tier1At: null, updated: new Date()
+      level: 0, tier: "NORMAL", fill1: 0, fill2: 0, full1: false, full2: false, blocked: 0, rain: 0,
+      riseSeconds: null, updated: new Date(), status: "good", since: now0
     };
     var xy = pickXY(); u.x = xy[0]; u.y = xy[1];
-    u.level = u.target;
-    u.tier = u.level >= OVER_CM ? "OVERFLOW" : (u.level >= 0.3 ? "TIER1" : "NORMAL");
-    u.full1 = u.fill1 >= 100; u.full2 = u.fill2 >= 100;
-    u.status = statusOf(u);
-    u.since = now0 - (init.mins != null ? init.mins : 60 + Math.floor(seeded() * 300)) * 60000;
     units.push(u);
   }
   // ---------- 실제 지도용 위치 ----------
@@ -981,6 +965,379 @@
   })(units[0]);
   var byId = {}; units.forEach(function(u){ byId[u.id] = u; });
 
+  // =====================================================================
+  // 가상 장치 49대 시뮬레이션 (모든 화면이 같은 값을 보도록 "시각 + 장치 번호"로 계산)
+  // ---------------------------------------------------------------------
+  //  · 4초 단위 공통 시계(k = 시각/4초). 어느 기기든 같은 k면 같은 값이 나온다.
+  //  · 난수 대신 해시(장치 번호, 시각 칸)를 쓰고, 계산은 사칙연산만 써서
+  //    휴대폰·PC 브라우저가 달라도 결과가 똑같이 나오게 했다(exp·sin·pow는 브라우저마다 끝자리가 다를 수 있음).
+  //  · 계산은 6시간 구간(0·6·12·18시)마다 새로 시작한다. 구간 시작 때의 수납함·입구 쓰레기는
+  //    장치별 마지막 정기 청소부터 1시간 단위로 계산하고(조치 기록·시연 조작 포함), 그 뒤는 4초 단위로 계산한다.
+  //  · 조치 기록·시연 조작은 서버를 거쳐 모든 화면에 같은 시각(k)으로 반영된다.
+  //    늦게 도착하면 그 시각 직전 저장본으로 되감아 다시 계산한다.
+  //
+  //  실제 관리 방식(서울시 2024 빗물받이 관리대책)에 맞춘 가정
+  //  · 정기 청소: 청소업체가 장마철 주요 지역을 2주에 1회 이상 청소 → 장치마다 날짜를 나눠 2주에 1회 새벽 4시
+  //    (49대를 14일로 나눠 하루 3~4대). 그 사이에 찬 수납함은 센서를 보고 사람을 보내 비운다(기존 인력 그대로).
+  //  · 날씨: 장마철처럼 대부분 맑거나 약한 비, 가끔 비구름이 지나가는 강한 비. 시연용 「호우 시나리오」는 3시간 동안 호우.
+  //
+  //  물리 규칙(아두이노 drain_wiper_with_water_sensor.ino와 같은 규칙)
+  //  · 수위 = 하수관이 넘쳐 역류하는 높이(주변 비를 약 6분 늦게 따라감, 침수 위험 지점일수록 쉽게 참)
+  //           + 입구로 들어온 물이 하수관으로 다 못 빠져 고이는 높이(입구가 막히거나 쓰레기가 덮으면 줄어듦)
+  //  · 수위 단계: 0.3cm 이상 강우 감지(TIER1, 0.15cm 미만이면 해제)
+  //               센서B 25%(10cm) 이상 마지노선 → 남은 와이퍼로 한 번 더 치운 뒤 두 입구를 막음
+  //               센서B 0%(9cm 미만)로 내려가면 다시 엶
+  //  · 쓰레기: 맑은 날에도 조금씩(담배꽁초·낙엽), 비가 오면 더 많이 입구 위에 쌓인다(장치마다 주변 환경에 따라 0.6~2.6배).
+  //            와이퍼가 돌 때(강우 중 5분마다, 평소 3시간마다) 와이퍼A는 수납함1, B는 수납함2로 쓸어 넣는다.
+  //            수납함이 100%(150g)가 되면 그 와이퍼가 입구를 막고, 사람이 비우기 전까지 그대로.
+  //            막힌 쪽 입구 위에는 쓰레기가 계속 쌓여 물이 덜 들어간다.
+  // =====================================================================
+  var SIM_STEP_MS = 4000;
+  var SIM_HOUR = 3600000, SIM_DAY = 86400000;
+  var SIM_PERIOD_STEPS = 6 * SIM_HOUR / SIM_STEP_MS;     // 6시간 = 5400칸
+  var SIM_KST_MS = 9 * SIM_HOUR;
+  var SIM_WARMUP = 450;                                   // 구간 시작 전 30분은 수위만 미리 계산
+  var SIM_SNAP_EVERY = 75;                                // 5분마다 저장본
+  var CLEAN_EVERY_DAYS = 14, CLEAN_HOUR = 4;              // 정기 청소: 2주에 1회, 새벽 4시
+  var SCENARIO_MS = 3 * SIM_HOUR;                         // 시연 「호우 시나리오」 길이
+  var WIPE_TIER1_STEPS = 75, WIPE_NORMAL_STEPS = 2700;    // 5분, 3시간 (아두이노 TIER1_INTERVAL, BASE_INTERVAL)
+  var BOX_FULL_G = 150;                                   // 적재율 100% 무게(아두이노 FULL_WEIGHT)
+  var LV_TIER1_ON = 0.3, LV_TIER1_OFF = 0.15, LV_OVER_ON = OVER_CM + 0.25 * WATER_B_CM, LV_OVER_OFF = OVER_CM;
+  var VERIFY_STEPS = 3;                                   // 조치 기록 뒤 센서 값 3번(12초)으로 판단
+  var DEBRIS_DRY_G_H = 0.3, DEBRIS_RAIN_G_MM = 0.4;       // 쓰레기: 시간당 0.3g + 비 1mm당 0.4g (× 장치별 배수)
+
+  // 정수 해시 → 0~1 (Math.imul만 써서 어느 브라우저에서도 같음)
+  function hsh(a, b, c){
+    var h = Math.imul(a | 0, 0x9E3779B1) ^ Math.imul(b | 0, 0x85EBCA77) ^ Math.imul(c | 0, 0xC2B2AE3D);
+    h = Math.imul(h ^ (h >>> 16), 0x7FEB352D); h = Math.imul(h ^ (h >>> 15), 0x846CA68B); h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  function clampS(v, a, b){ return v < a ? a : (v > b ? b : v); }
+  function kstDay(t){ return Math.floor((t + SIM_KST_MS) / SIM_DAY); }
+  function cleanTimeOfDay(d){ return d * SIM_DAY - SIM_KST_MS + CLEAN_HOUR * SIM_HOUR; }
+  // 장치 i의 t 이전(같거나) 마지막 정기 청소 시각
+  function lastCleanAt(i, t){
+    var d = kstDay(t);
+    if (cleanTimeOfDay(d) > t) d--;
+    var back = ((d + i) % CLEAN_EVERY_DAYS + CLEAN_EVERY_DAYS) % CLEAN_EVERY_DAYS;
+    return cleanTimeOfDay(d - back);
+  }
+
+  function createSim(sites){
+    var N = sites.length;
+    // 장치별 고정 값: 위치(km), 침수 취약도, 하수관 처리 능력, 쓰레기 많음 정도
+    var P = sites.map(function(st, i){
+      var basis = st[3] || "", vul;
+      if (basis.indexOf("과거 침수") >= 0) vul = 0.95;
+      else if (basis.indexOf("2.0~3.0") >= 0) vul = 1.0;
+      else if (basis.indexOf("1.5~2.0") >= 0) vul = 0.92;
+      else if (basis.indexOf("1.0~1.5") >= 0) vul = 0.85;
+      else if (basis.indexOf("0.5~1.0") >= 0) vul = 0.72;
+      else vul = 0.55;
+      var h1 = hsh(i, 11, 0), h2 = hsh(i, 12, 0), h3 = hsh(i, 13, 0);
+      return {x:(st[1] - 126.90) * 88.2, y:(st[0] - 37.46) * 111.0, vul:vul + (h1 - 0.5) * 0.1,
+              qcap:30 + 20 * h2, df:0.6 + 2.0 * h3 * h3 * h3};
+    });
+
+    // ---------- 날씨: 3시간 칸마다 맑음 85% / 약한 비 8% / 비 5% / 호우 2% ----------
+    var BLOCK = 3 * SIM_HOUR, CELL_SLOT = 25 * 60000;
+    function regime(b, mods){
+      var t = b * BLOCK + BLOCK / 2;
+      if (scenarioOn(t, mods)) return 3;
+      var h = hsh(b, 3, 202);
+      return h < 0.85 ? 0 : (h < 0.93 ? 1 : (h < 0.98 ? 2 : 3));
+    }
+    function scenarioOn(t, mods){
+      for (var n = 0; n < mods.scen.length; n++){ var s = mods.scen[n]; if (t >= s.t && t < s.end) return true; }
+      return false;
+    }
+    var BASE = [0, 2, 4.5, 7];
+    function baseRain(t, mods){
+      if (scenarioOn(t, mods)) return 6 + 3 * smooth(5, t, 600000);
+      // 3시간 칸의 가운데끼리 직선으로 이어 비가 서서히 오고 그치게
+      var b = Math.floor((t - BLOCK / 2) / BLOCK), f = (t - BLOCK / 2 - b * BLOCK) / BLOCK;
+      var a = BASE[regime(b, mods)], c = BASE[regime(b + 1, mods)];
+      var v = a + (c - a) * f;
+      return v > 0 ? v * (0.6 + 0.8 * smooth(3, t, 600000)) : 0;
+    }
+    function smooth(seed, t, knotMs){   // 칸 사이를 직선으로 이은 매끄러운 잡음 0~1
+      var j = Math.floor(t / knotMs), f = (t - j * knotMs) / knotMs;
+      var a = hsh(seed, j, 7), b = hsh(seed, j + 1, 7);
+      return a + (b - a) * f;
+    }
+    function cellsAt(t, mods){
+      var out = [], j0 = Math.floor(t / CELL_SLOT);
+      // 시연 「호우 시나리오」: 시작 2분 뒤부터 15분마다 강한 비구름이 관악구 서쪽 끝에서 들어옴
+      for (var n = 0; n < mods.scen.length; n++){
+        var sc = mods.scen[n];
+        for (var m = 0; m * 900000 < sc.end - sc.t; m++){
+          var st0 = sc.t + 120000 + m * 900000, lf = (30 + 15 * hsh(sc.t / 1000 | 0, m, 303)) * 60000;
+          if (t < st0 || t > st0 + lf) continue;
+          var ta = (t - st0) / lf, v0 = 20 + 15 * hsh(sc.t / 1000 | 0, m, 304), hr0 = (t - st0) / SIM_HOUR;
+          out.push({cx:-1 + v0 * hr0, cy:0.5 + 2.5 * hsh(sc.t / 1000 | 0, m, 305), s:1.8 + 1.5 * hsh(sc.t / 1000 | 0, m, 306),
+                    p:(30 + 40 * hsh(sc.t / 1000 | 0, m, 307)) * 4 * ta * (1 - ta)});
+        }
+      }
+      for (var j = j0 - 3; j <= j0; j++){
+        var start = j * CELL_SLOT + hsh(j, 2, 101) * CELL_SLOT;
+        if (scenarioOn(start, mods)) continue;                        // 시나리오 중에는 위의 비구름만
+        var rg = regime(Math.floor(start / BLOCK), mods);
+        if (rg < 2) continue;
+        if (hsh(j, 1, 101) > (rg === 3 ? 0.85 : 0.5)) continue;     // 비: 칸의 절반, 호우: 85%에 비구름
+        var life = (30 + 20 * hsh(j, 3, 101)) * 60000;
+        if (t < start || t > start + life) continue;
+        var tau = (t - start) / life, env = 4 * tau * (1 - tau);
+        var v = 18 + 22 * hsh(j, 4, 101);                            // km/h, 서→동
+        var hrs = (t - start) / SIM_HOUR;
+        var peak = rg === 3 ? 25 + 65 * hsh(j, 9, 101) : 12 + 28 * hsh(j, 9, 101);
+        out.push({cx:-2 - 2 * hsh(j, 5, 101) + v * hrs, cy:-0.5 + 4.5 * hsh(j, 6, 101) + v * 0.3 * (hsh(j, 7, 101) - 0.5) * hrs,
+                  s:1.2 + 1.8 * hsh(j, 8, 101), p:peak * env});
+      }
+      return out;
+    }
+    function rainAt(i, t, cells, mods){
+      var p = P[i], r = baseRain(t, mods);
+      for (var c = 0; c < cells.length; c++){
+        var dx = p.x - cells[c].cx, dy = p.y - cells[c].cy, q = 1 + (dx * dx + dy * dy) / (cells[c].s * cells[c].s);
+        r += cells[c].p / (q * q);
+      }
+      for (var m = 0; m < mods.storms.length; m++){           // 시연: 국지성 폭우(10분)
+        var sm = mods.storms[m], el = t - sm.t;
+        if (el < 0 || el > 600000) continue;
+        var env2 = el < 60000 ? el / 60000 : (el < 480000 ? 1 : (600000 - el) / 120000);
+        var sx = p.x - P[sm.i].x, sy = p.y - P[sm.i].y, sq = 1 + (sx * sx + sy * sy) / 0.36;
+        r += 130 * env2 / (sq * sq);
+      }
+      return r * mods.pause;
+    }
+    // 시연 「전체 정상으로」: 15분 동안 비가 그치고 5분에 걸쳐 다시 내림(진행 중인 호우 시나리오도 끝남)
+    function pauseAt(t, resets){
+      var f = 1;
+      for (var n = 0; n < resets.length; n++){
+        var el = t - resets[n];
+        if (el < 0) continue;
+        if (el < 900000) f = 0; else if (el < 1200000) f = Math.min(f, (el - 900000) / 300000);
+      }
+      return f;
+    }
+
+    // ---------- 상태 ----------
+    var S = {k:0, anchor:0, u:[], log:[], results:{}, pending:[]};
+    var events = [];          // {k, key, kind:"acts"|"storm"|"boxfull"|"reset"|"scenario", i, acts, rid}
+    var snaps = [];
+
+    function anchorOf(k){ var tk = k * SIM_STEP_MS + SIM_KST_MS; return Math.floor(tk / (SIM_PERIOD_STEPS * SIM_STEP_MS)) * SIM_PERIOD_STEPS - SIM_KST_MS / SIM_STEP_MS; }
+    function residual(i, k){ return 1 + 4 * hsh(i, k, 31); }
+    function freshUnit(i, k){
+      return {L:0, Rl:0, R:0, tier:0, GA:0, GB:0, b1:residual(i, k), b2:residual(i, k + 1), f1:false, f2:false,
+              blkA:false, blkB:false, over:false, lastWipe:k - Math.floor(hsh(i, k, 41) * WIPE_TIER1_STEPS),
+              st:"good", stK:k, t1K:null, rise:null, cleanK:null};
+    }
+    function baseSt(s){
+      if (s.tier === 2 || s.f1 || s.f2) return "crit";
+      if (s.tier === 1 || s.b1 >= 80 || s.b2 >= 80) return "warn";
+      return "good";
+    }
+    function modsAt(t){
+      var storms = [], resets = [], scen = [];
+      for (var n = 0; n < events.length; n++){
+        var e = events[n], et = e.k * SIM_STEP_MS;
+        if (et > t) break;
+        if (e.kind === "storm") storms.push({t:et, i:e.i});
+        else if (e.kind === "reset"){ resets.push(et); scen.forEach(function(s){ if (s.end > et) s.end = et; }); }
+        else if (e.kind === "scenario") scen.push({t:et, end:et + SCENARIO_MS});
+      }
+      return {storms:storms, resets:resets, scen:scen, pause:pauseAt(t, resets)};
+    }
+    function updateBlocks(s){ s.blkA = s.over || s.f1; s.blkB = s.over || s.f2; }
+    function checkFull(s){
+      if (s.b1 >= 99.95){ s.b1 = 100; s.f1 = true; }
+      if (s.b2 >= 99.95){ s.b2 = 100; s.f2 = true; }
+      updateBlocks(s);
+    }
+    function wipe(s){
+      if (!s.blkA){ var g = Math.min(s.GA, (100 - s.b1) / 100 * BOX_FULL_G); s.b1 += g / BOX_FULL_G * 100; s.GA -= g; }
+      if (!s.blkB){ var g2 = Math.min(s.GB, (100 - s.b2) / 100 * BOX_FULL_G); s.b2 += g2 / BOX_FULL_G * 100; s.GB -= g2; }
+      checkFull(s);
+    }
+    function emptyBoxes(i, s, k){ s.b1 = residual(i, k); s.b2 = residual(i, k + 1); s.f1 = false; s.f2 = false; updateBlocks(s); }
+    // 한 칸(4초) 진행. hydroOnly = 구간 시작 전 미리 계산(쓰레기는 쌓지 않음)
+    function stepUnit(i, s, k, mods, cells, hydroOnly){
+      var t = k * SIM_STEP_MS, p = P[i];
+      var R = rainAt(i, t, cells, mods); s.R = R;
+      s.Rl += (R - s.Rl) / 90;                                            // 약 6분 늦게 따라가는 하수관 쪽 비
+      var Ss = 13 * clampS((s.Rl * p.vul - 15) / 35, 0, 1.15);            // 하수관 역류 높이
+      var G = s.GA + s.GB, open = ((s.blkA ? 0 : 1) + (s.blkB ? 0 : 1)) / 2 * (1 - G / (G + 250));
+      var q = R * p.vul * open / p.qcap;
+      var Hl = 4 * clampS((q - 0.6) / 0.6, 0, 1.5);                        // 입구로 들어와 고이는 높이
+      var Lt = Ss + Hl * (1 - Ss / 13); if (Lt > 13) Lt = 13;
+      s.L += (Lt - s.L) * (Lt > s.L ? 4 / 45 : 4 / 150);
+      // 수위 단계 (아두이노 handleWaterState와 같은 순서)
+      var prevTier = s.tier;
+      if (!s.over){
+        if (s.L >= LV_OVER_ON){ wipe(s); s.over = true; updateBlocks(s); s.tier = 2; }
+        else s.tier = s.L >= LV_TIER1_ON ? 1 : (s.L < LV_TIER1_OFF ? 0 : (prevTier === 2 ? 1 : prevTier));
+      } else if (s.L < LV_OVER_OFF){ s.over = false; updateBlocks(s); s.tier = s.L >= LV_TIER1_ON ? 1 : 0; }
+      if (prevTier === 0 && s.tier >= 1){ s.t1K = k; s.rise = null; }
+      if (prevTier < 2 && s.tier === 2 && s.t1K != null) s.rise = (k - s.t1K) * 4;
+      if (hydroOnly) return;
+      var dg = (DEBRIS_DRY_G_H + DEBRIS_RAIN_G_MM * R) * p.df / 900;    // 4초 동안 쌓이는 쓰레기(g), 두 입구에 반씩
+      s.GA += dg / 2; s.GB += dg / 2;
+      var every = s.tier >= 1 ? WIPE_TIER1_STEPS : WIPE_NORMAL_STEPS;
+      if (k - s.lastWipe >= every){ wipe(s); s.lastWipe = k; }
+    }
+    function applyTo(ev, i, s, k){
+      if (ev.kind === "acts"){
+        if (ev.acts.indexOf("box") >= 0) emptyBoxes(i, s, k);
+        if (ev.acts.indexOf("inlet") >= 0 || ev.acts.indexOf("cover") >= 0){ s.GA = 0; s.GB = 0; }
+      } else if (ev.kind === "boxfull"){
+        s.b1 = 100; s.b2 = 100; s.f1 = true; s.f2 = true; updateBlocks(s);
+      } else if (ev.kind === "reset"){
+        s.L = 0; s.Rl = 0; s.GA = 0; s.GB = 0; emptyBoxes(i, s, k);
+        s.over = false; s.tier = 0; s.t1K = null; s.rise = null; updateBlocks(s);
+      }
+    }
+    function touches(ev, i){ return ev.kind === "reset" || ((ev.kind === "acts" || ev.kind === "boxfull") && ev.i === i); }
+    function judge(i, s){
+      if (s.tier === 2) return {result:"fail", st:"crit", why:"마지노선 수위 · 입구 차단"};
+      if (s.f1 || s.f2) return {result:"fail", st:"crit", why:(s.f1 && s.f2 ? "수납함 1·2" : (s.f1 ? "수납함1" : "수납함2")) + " 가득 참"};
+      if (s.b1 >= 80 || s.b2 >= 80) return {result:"fail", st:"warn", why:"수납함 " + Math.round(Math.max(s.b1, s.b2)) + "%"};
+      return {result:"ok", st:baseSt(s), why:s.tier === 1 ? "비로 수위 상승 중(조치와 무관)" : ""};
+    }
+    function stepAll(k){
+      var t = k * SIM_STEP_MS, mods = modsAt(t);
+      var cells = cellsAt(t, mods);
+      for (var e = 0; e < events.length; e++){
+        var ev = events[e]; if (ev.k > k) break; if (ev.k !== k) continue;
+        for (var i0 = 1; i0 < N; i0++) if (touches(ev, i0)) applyTo(ev, i0, S.u[i0], k);
+        if (ev.kind === "acts" && ev.rid) S.pending.push({rid:ev.rid, i:ev.i, due:k + VERIFY_STEPS});
+      }
+      for (var i = 1; i < N; i++){
+        var s = S.u[i];
+        if (s.cleanK === k){ s.GA = 0; s.GB = 0; emptyBoxes(i, s, k); S.log.push({k:k, i:i, kind:"clean"}); }
+        stepUnit(i, s, k, mods, cells, false);
+        var st = baseSt(s);
+        if (st !== s.st){ S.log.push({k:k, i:i, from:s.st, to:st}); s.st = st; s.stK = k; }
+      }
+      if (S.log.length > 300) S.log.splice(0, S.log.length - 300);
+      for (var pIdx = S.pending.length - 1; pIdx >= 0; pIdx--){
+        var pd = S.pending[pIdx];
+        if (k >= pd.due){ var j = judge(pd.i, S.u[pd.i]); j.k = k; S.results[pd.rid] = j; S.pending.splice(pIdx, 1); }
+      }
+      S.k = k;
+      if ((k - S.anchor) % SIM_SNAP_EVERY === 0) snaps.push(JSON.stringify(S));
+    }
+    // 구간 시작 때 수납함·입구 쓰레기: 마지막 정기 청소부터 1시간 단위로 계산(15분마다 비를 재서 평균)
+    function coarse(anchorT){
+      var res = [];
+      var t0 = anchorT;
+      for (var i = 1; i < N; i++) t0 = Math.min(t0, lastCleanAt(i, anchorT));
+      var state = [], start = [];
+      for (var i2 = 0; i2 < N; i2++){
+        var lc = lastCleanAt(i2, anchorT);
+        start.push(lc); var fu = freshUnit(i2, Math.floor(lc / SIM_STEP_MS)); fu.stT = lc; state.push(fu);
+      }
+      var evIdx = 0;
+      for (var h = t0; h < anchorT; h += SIM_HOUR){
+        var hEnd = Math.min(h + SIM_HOUR, anchorT);
+        var rs = []; for (var i3 = 0; i3 < N; i3++) rs.push(0);
+        for (var q = 0; q < 4; q++){
+          var tq = h + (q + 0.5) * (SIM_HOUR / 4), mods = modsAt(tq), cells = cellsAt(tq, mods);
+          for (var i4 = 1; i4 < N; i4++) rs[i4] += rainAt(i4, tq, cells, mods) / 4;
+        }
+        // 이 시간 안의 조치·시연 이벤트(정기 청소 뒤의 것만)
+        while (evIdx < events.length && events[evIdx].k * SIM_STEP_MS < hEnd){
+          var ev = events[evIdx++], et = ev.k * SIM_STEP_MS;
+          for (var i5 = 1; i5 < N; i5++) if (et >= start[i5] && touches(ev, i5)) applyTo(ev, i5, state[i5], ev.k);
+        }
+        var hourNo = Math.floor(h / SIM_HOUR);
+        for (var i6 = 1; i6 < N; i6++){
+          if (h < start[i6]) continue;
+          var s = state[i6], frac = (hEnd - h) / SIM_HOUR;
+          var dg = (DEBRIS_DRY_G_H + DEBRIS_RAIN_G_MM * rs[i6]) * P[i6].df * frac;
+          s.GA += dg / 2; s.GB += dg / 2;
+          if (rs[i6] >= 2 || (hourNo + i6) % 3 === 0) wipe(s);      // 비 오는 시간엔 매시간, 평소엔 3시간마다 치운 것으로
+          var nst = baseSt(s); if (nst !== s.st){ s.st = nst; s.stT = hEnd; }   // 가득 참·80% 넘은 시각(지속 시간 표시용)
+        }
+      }
+      for (var i7 = 0; i7 < N; i7++) res.push(state[i7]);
+      return res;
+    }
+    // 구간 시작: 30분 전부터 수위만 계산한 뒤, 수납함·입구는 1시간 단위 계산 결과로
+    function startPeriod(anchor){
+      var anchorT = anchor * SIM_STEP_MS;
+      S = {k:anchor - SIM_WARMUP, anchor:anchor, u:[], log:[], results:{}, pending:[]};
+      for (var i = 0; i < N; i++) S.u.push(freshUnit(i, anchor));
+      for (var k = anchor - SIM_WARMUP; k < anchor; k++){
+        var mods = modsAt(k * SIM_STEP_MS), cells = cellsAt(k * SIM_STEP_MS, mods);
+        for (var i2 = 1; i2 < N; i2++) stepUnit(i2, S.u[i2], k, mods, cells, true);
+      }
+      var c = coarse(anchorT);
+      for (var i3 = 1; i3 < N; i3++){
+        var s = S.u[i3], cs = c[i3];
+        s.GA = cs.GA; s.GB = cs.GB; s.b1 = cs.b1; s.b2 = cs.b2; s.f1 = cs.f1; s.f2 = cs.f2; updateBlocks(s);
+        s.lastWipe = anchor - Math.floor(hsh(i3, anchor, 41) * WIPE_TIER1_STEPS);
+        s.st = baseSt(s); s.stK = s.st === cs.st && cs.stT ? Math.floor(cs.stT / SIM_STEP_MS) : anchor;
+        // 이 구간 안에 정기 청소가 있으면 그 칸
+        var nc = lastCleanAt(i3, anchorT + SIM_PERIOD_STEPS * SIM_STEP_MS - 1);
+        s.cleanK = nc > anchorT ? Math.floor(nc / SIM_STEP_MS) : null;
+      }
+      S.k = anchor - 1;
+      snaps = [];
+    }
+    function advanceTo(kNow){
+      var a = anchorOf(kNow);
+      if (a !== S.anchor) startPeriod(a);
+      for (var k = S.k + 1; k <= kNow; k++) stepAll(k);
+    }
+    // 이벤트 추가(여러 개를 한 번에). 이미 지난 시각이면 가장 이른 것 직전 저장본으로 되감아 한 번만 다시 계산
+    function addEvents(list){
+      var minK = Infinity, added = false;
+      list.forEach(function(ev){
+        if (!ev || !ev.key || events.some(function(e){ return e.key === ev.key; })) return;
+        events.push(ev); added = true; if (ev.k < minK) minK = ev.k;
+      });
+      if (!added) return false;
+      events.sort(function(a, b){ return a.k - b.k || (a.key < b.key ? -1 : 1); });
+      if (S.u.length && minK <= S.k){
+        var kNow = S.k, best = null;
+        if (minK > S.anchor){
+          for (var n = snaps.length - 1; n >= 0; n--){
+            var sk = Number(snaps[n].slice(5, snaps[n].indexOf(",")));     // '{"k":12345,...'
+            if (sk < minK){ best = JSON.parse(snaps[n]); snaps.length = n + 1; break; }
+          }
+        }
+        if (best) S = best; else startPeriod(S.anchor);
+        for (var k = S.k + 1; k <= kNow; k++) stepAll(k);
+      }
+      return true;
+    }
+    function addEvent(ev){ return addEvents([ev]); }
+    function nextClean(i, t){ return lastCleanAt(i, t + CLEAN_EVERY_DAYS * SIM_DAY); }
+    return {
+      advanceTo:advanceTo, addEvent:addEvent, addEvents:addEvents,
+      unit:function(i){ return S.u[i]; }, k:function(){ return S.k; }, anchor:function(){ return S.anchor; },
+      log:function(){ return S.log; }, result:function(rid){ return S.results[rid] || null; },
+      params:function(i){ return P[i]; }, hasEvent:function(key){ return events.some(function(e){ return e.key === key; }); },
+      lastClean:function(i, t){ return lastCleanAt(i, t); }, nextClean:nextClean,
+      scenarioEnd:function(t){ var m = modsAt(t); for (var n = 0; n < m.scen.length; n++) if (t >= m.scen[n].t && t < m.scen[n].end) return m.scen[n].end; return 0; },
+      paused:function(t){ return modsAt(t).pause < 1; }
+    };
+  }
+
+  var SIM = createSim(SITES);
+  var TIER_NAME = ["NORMAL", "TIER1", "OVERFLOW"];
+  function simK(t){ return Math.floor(t / SIM_STEP_MS); }
+  // 시뮬레이션 값 → 화면용 장치 값
+  function readSim(u){
+    var s = SIM.unit(u.idx);
+    u.level = s.L; u.tier = TIER_NAME[s.tier]; u.fill1 = s.b1; u.fill2 = s.b2; u.full1 = s.f1; u.full2 = s.f2;
+    u.blocked = (s.blkA ? 1 : 0) + (s.blkB ? 2 : 0); u.riseSeconds = s.rise; u.rain = s.R;
+    u.updated = new Date(SIM.k() * SIM_STEP_MS); u.simSince = s.stK * SIM_STEP_MS;
+  }
+  SIM.advanceTo(simK(now0));
+  units.forEach(function(u){ if (u.real) return; readSim(u); u.status = statusOf(u); u.since = u.simSince; });
+
   // 예시 배치: 표시가 서로 겹치지 않도록 최소 간격을 두고 뽑는다
   function pickXY(){
     var px, py;
@@ -1044,7 +1401,8 @@
     var m = Math.floor((Date.now() - u.since) / 60000);
     if (m < 1) return "방금";
     if (m < 60) return m + "분째";
-    return Math.floor(m / 60) + "시간 " + (m % 60) + "분째";
+    if (m < 1440) return Math.floor(m / 60) + "시간 " + (m % 60) + "분째";
+    return Math.floor(m / 1440) + "일 " + Math.floor(m % 1440 / 60) + "시간째";
   }
   function fmtTime(d){ return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function(n){ return String(n).padStart(2, "0"); }).join(":"); }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
@@ -1054,7 +1412,7 @@
       if (!u.everData) return tsInfo.ok === false ? "실측 장치 · ThingSpeak 연결 실패" : "실측 장치 · 첫 값 기다리는 중";
       return "실측 장치 · ThingSpeak 채널 " + TS_CHANNEL_ID + (u.offline ? " · 통신 끊김" : "");
     }
-    return "가상 장치(시뮬레이션)";
+    return "가상 장치(시뮬레이션 · 모든 화면 같은 값)";
   }
   function blockedText(b){ return ["없음", "와이퍼A", "와이퍼B", "와이퍼A·B"][b] || "-"; }
 
@@ -1107,32 +1465,38 @@
     setStatus(u, statusOf(u), Date.now());
   }
 
-  // ---------- 시뮬레이션 ----------
-  function step(u){
-    if (u.real){ checkOffline(); return; }
-    if (u.tier === "NORMAL" && rand() < 0.0004) u.target = 2 + rand() * 1.5;
-    else if (u.tier === "TIER1" && rand() < 0.004) u.target = 0.05;
-    else if (u.tier === "TIER1" && rand() < 0.0012) u.target = 9.7;
-    else if (u.tier === "OVERFLOW" && rand() < 0.01) u.target = 2;
-
-    u.level = clamp(u.level + (u.target - u.level) * 0.2 + (rand() - 0.5) * 0.12, 0, WATER_TOTAL_CM);
-    var debris = u.tier === "NORMAL" ? 0.01 : 0.22;
-    u.fill1 = clamp(u.fill1 + rand() * debris, 0, 100);
-    u.fill2 = clamp(u.fill2 + rand() * debris, 0, 100);
-    if (u.fill1 >= 100) u.full1 = true; else if (u.fill1 < 80) u.full1 = false;
-    if (u.fill2 >= 100) u.full2 = true; else if (u.fill2 < 80) u.full2 = false;
-
-    var prev = u.tier, t = Date.now();
-    if (u.tier === "OVERFLOW"){ if (u.level < OVER_CM - 2) u.tier = "TIER1"; }
-    else if (u.tier === "TIER1"){ if (u.level >= OVER_CM) u.tier = "OVERFLOW"; else if (u.level < 0.2) u.tier = "NORMAL"; }
-    else if (u.level >= 0.3) u.tier = "TIER1";
-    if (prev === "NORMAL" && u.tier === "TIER1"){ u.tier1At = t; u.riseSeconds = null; }
-    if (prev === "TIER1" && u.tier === "OVERFLOW" && u.tier1At) u.riseSeconds = Math.round((t - u.tier1At) / 1000);
-
-    u.updated = new Date();
-    if (u.verify && ++u.verify.ticks >= VERIFY_TICKS){ finishVerify(u, "sensor"); return; }
-    setStatus(u, statusOf(u), t);
+  // ---------- 시뮬레이션 한 칸(4초) 진행 → 화면 값 갱신 ----------
+  function simTick(){
+    var k = simK(Date.now());
+    flushSim();
+    SIM.advanceTo(k);
+    units.forEach(function(u){
+      if (u.real){ checkOffline(); return; }
+      readSim(u);
+      if (u.verify){
+        var res = SIM.result(u.verify.rid);
+        if (res){ finishVerify(u, "sim", res); return; }
+        if (Date.now() - u.verify.ts > VERIFY_TIMEOUT_MS){ finishVerify(u, "timeout"); return; }
+      }
+      var before = u.status;
+      setStatus(u, statusOf(u), u.simSince);
+      if (before !== u.status && u.status !== "chk") u.since = u.simSince;
+    });
+    render();
+    setTimeout(simTick, Math.max(200, (k + 1) * SIM_STEP_MS - Date.now() + 30));
   }
+  // 조치 기록·시연 조작 → 시뮬레이션 이벤트 (모든 화면에서 같은 시각 칸 k에 반영)
+  // 서버에서 여러 개가 한꺼번에 오면 모아서 한 번에 넣는다(되감기를 한 번만 하도록)
+  var simQueue = [];
+  function simActs(r){
+    var u = byId[r.id]; if (!u || u.real) return;
+    simQueue.push({k:simK(r.ts), key:"rec:" + r.rid, kind:"acts", i:u.idx, acts:r.acts.slice(), rid:r.rid});
+  }
+  function simDemo(kind, ts, id, key){
+    var u = byId[id] || byId["GA-002"];
+    simQueue.push({k:simK(ts), key:"demo:" + key, kind:kind, i:u.idx});
+  }
+  function flushSim(){ if (simQueue.length){ var q = simQueue; simQueue = []; SIM.addEvents(q); } }
 
   // ---------- 모니터링 화면 ----------
   function attentionList(){
@@ -1150,11 +1514,21 @@
     document.getElementById("tileCrit").classList.toggle("on", counts.crit > 0);
   }
 
-  // 긴급 공지는 하나만 (p.362): 호우주의보 + 위험 장치 수를 한 문장으로
+  // 긴급 공지는 하나만 (p.362): 지금 비(시뮬레이션) + 위험 장치 수를 한 문장으로.
+  // 위험 장치도 없고 비도 약하면 공지를 숨긴다(긴급할 때만 보이도록)
+  function districtRain(){
+    var n = 0, r = 0; units.forEach(function(u){ if (!u.real){ r += u.rain || 0; n++; } });
+    return n ? r / n : 0;
+  }
   function renderCritical(counts){
-    var text = "호우주의보 발효 중(예시)";
-    text += counts.crit ? " · 위험 장치 " + counts.crit + "대, 입구 차단 중" : " · 위험 장치 없음";
-    document.getElementById("caText").textContent = text;
+    var now = Date.now(), r = districtRain(), scEnd = SIM.scenarioEnd(now), parts = [];
+    if (scEnd) parts.push("호우 시나리오 진행 중(시연) · 관악구 평균 시간당 " + Math.round(r) + "mm · " + Math.max(1, Math.round((scEnd - now) / 60000)) + "분 남음");
+    else if (r >= 20) parts.push("강한 비 · 관악구 평균 시간당 " + Math.round(r) + "mm(시뮬레이션)");
+    else if (r >= 3) parts.push("비 · 관악구 평균 시간당 " + Math.round(r) + "mm(시뮬레이션)");
+    if (counts.crit) parts.push("위험 장치 " + counts.crit + "대, 입구 차단 중");
+    var show = parts.length > 0, cr = document.getElementById("critical");
+    if (show) document.getElementById("caText").textContent = parts.join(" · ");
+    if (cr.hidden === show){ cr.hidden = !show; if (typeof measureSticky === "function") measureSticky(); }
   }
 
   function renderAttention(att){
@@ -1216,7 +1590,9 @@
         '<div class="track"><div class="fill ' + cls + '" style="width:' + clamp(v,0,100) + '%"></div></div>' +
         (full ? '<span class="full-flag">가득 참 · 입구 차단</span>' : '') + '</div>';
     }
-    var logs = actionLog.filter(function(l){ return l.id === u.id; })
+    var cleanLog = [];
+    if (!u.real){ var lc = SIM.lastClean(u.idx, Date.now()); if (Date.now() - lc < 86400000) cleanLog.push({ts:lc, time:fmtTime(new Date(lc)), text:"정기 청소 · 수납함·입구 비움 (청소업체, 2주 1회 가정)"}); }
+    var logs = actionLog.filter(function(l){ return l.id === u.id; }).concat(cleanLog)
       .concat(records.filter(function(r){ return r.id === u.id; }).map(function(r){ return {ts:r.ts, time:fmtTime(new Date(r.ts)), html:recordText(r)}; }))
       .sort(function(a, b){ return a.ts - b.ts; }).slice(-3).reverse();
     el.innerHTML =
@@ -1230,10 +1606,12 @@
         '<div class="tick" style="left:' + A_PCT + '%"></div><div class="tick" style="left:' + B_PCT + '%"></div></div>' +
         '<span class="meter-sub">센서A ' + Math.round(sensorAPercent(u.level)) + '% · 센서B ' + Math.round(sensorBPercent(u.level)) + '%' +
           (gapUnknown ? ' · 갭 구간이라 정확한 수위는 알 수 없음' : '') +
-          (u.riseSeconds != null ? ' · A→B 상승 ' + u.riseSeconds + '초' : '') +
+          (u.riseSeconds != null && u.tier !== "NORMAL" ? ' · A→B 상승 ' + u.riseSeconds + '초' : '') +
           (u.overflowBySensorA ? ' · 센서 B 설치 전이라 센서 A 맨 위를 마지노선으로 판단' : '') + '</span></div>' +
       '<div class="boxes">' + boxMeter(1, u.fill1, u.full1) + boxMeter(2, u.fill2, u.full2) + '</div>' +
       (u.real && u.everData ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + '</p>' : '') +
+      (!u.real ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + ' · 주변 비 시간당 ' + Math.round(u.rain) + 'mm' + (u.tier !== "NORMAL" ? ' · 와이퍼 5분마다 작동' : ' · 와이퍼 3시간마다 작동') +
+        '<br>정기 청소: 마지막 ' + mdhm(SIM.lastClean(u.idx, Date.now())) + ' · 다음 ' + mdhm(SIM.nextClean(u.idx, Date.now())) + ' (2주 1회 새벽, 가정)</p>' : '') +
       '<div class="actions">' +
         (u.dispatch ? '<p class="dsp-line">' + dispatchText(u.dispatch) + '</p>'
                     : '<button type="button" class="btn primary" data-act="dispatch"' + (u.status === "good" || u.verify ? ' disabled aria-disabled="true"' : '') + '>현장 출동 요청</button>') +
@@ -1280,6 +1658,7 @@
   }
 
   // ---------- 상황실 ----------
+  function mdhm(t){ var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
   function hhmm(t){ var d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
   function renderOps(counts, att){
     document.getElementById("oGood").textContent = counts.good;
@@ -1312,35 +1691,36 @@
   // 센서가 다음 값을 보내 정상이면 확인 완료, 아니면 "조치 후에도 이상"으로 다시 알린다.
   // 서버(Apps Script) 연결 전까지는 이 브라우저에만 저장된다.
   function recordText(r){
-    var s = "조치 기록 · " + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + " (" + esc(r.who) + ")";
+    var s = "조치 기록 · " + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.who ? " (" + esc(r.who) + ")" : "");
     if (r.result === "wait") return s + " → 센서 확인 중";
     if (r.result === "ok") return s + " → 정상 확인 " + hhmm(r.doneAt);
     if (r.result === "fail") return s + " → 조치 후에도 이상: " + esc(r.after);
     return s + " → 확인 못 함: " + esc(r.after);
   }
   function saveRecords(){ try { localStorage.setItem("fieldRecords", JSON.stringify(records.slice(-200))); } catch(e){} }
-  function finishVerify(u, how){
+  // how: "sensor"(실측 새 값) / "sim"(가상 장치, 시뮬레이션 판정 res) / "timeout"
+  function finishVerify(u, how, res){
     var r = null;
     for (var i = records.length - 1; i >= 0; i--){ if (records[i].rid === u.verify.rid){ r = records[i]; break; } }
     u.verify = null;
     var base = baseStatus(u), now = Date.now();
     if (r){
-      r.doneAt = now; r.afterSt = base;
-      if (base === "good"){ r.result = "ok"; r.after = "정상"; }
+      r.doneAt = how === "sim" ? res.k * SIM_STEP_MS : now; r.afterSt = how === "sim" ? res.st : base;
+      var repairNote = r.acts.indexOf("repair") >= 0 ? " (수리 필요로 기록됨)" : "";
+      if (how === "sim"){
+        // 가상 장치: 수납함·마지노선 문제가 풀렸는지로 판단(비로 생긴 강우 감지는 사람이 해결할 수 없으므로 제외)
+        r.result = res.result;
+        r.after = res.result === "ok" ? "정상" + (res.why ? " · " + res.why : "") : LABEL[res.st] + " · " + res.why + repairNote;
+      }
+      else if (base === "good"){ r.result = "ok"; r.after = "정상"; }
       else if (base === "off" || how === "timeout"){ r.result = "lost"; r.after = how === "timeout" ? "10분 동안 센서 값이 오지 않음" : "센서 통신 끊김"; }
-      else { r.result = "fail"; r.after = LABEL[base] + " · " + reasonOf(u) + (r.acts.indexOf("repair") >= 0 ? " (수리 필요로 기록됨)" : ""); }
+      else { r.result = "fail"; r.after = LABEL[base] + " · " + reasonOf(u) + repairNote; }
       saveRecords();
       if (r.client === CLIENT) sendEvent("result", u.id, {rid:r.rid, result:r.result, after:r.after, afterSt:r.afterSt, doneAt:r.doneAt});
       if (r.result !== "ok") toast(u.id + " " + (r.result === "fail" ? "조치 후에도 이상: " : "확인 못 함: ") + r.after);
     }
     setStatus(u, statusOf(u), now);
-  }
-  // 가상 장치: 기록한 조치를 시뮬레이션 값에 반영 (실측 장치는 실제 센서 값으로만 판단)
-  function applyActsSim(u, acts){
-    if (acts.indexOf("box") >= 0){ u.fill1 = 3 + rand() * 5; u.fill2 = 3 + rand() * 5; u.full1 = false; u.full2 = false; }
-    if ((acts.indexOf("inlet") >= 0 || acts.indexOf("cover") >= 0) && u.tier !== "NORMAL"){
-      u.level = 0.12; u.target = 0.08; u.tier = "NORMAL"; u.riseSeconds = null;   // 입구가 뚫려 물이 빠짐
-    }
+    if (!u.real && u.status !== "chk") u.since = how === "sim" ? r && r.doneAt || now : now;
   }
   var recFor = null, recOpener = null;
   var recDlg = document.getElementById("recDlg");
@@ -1396,9 +1776,9 @@
       if (u.dispatch){ r.reqAt = u.dispatch.ts; r.reqTo = u.dispatch.to; r.startAt = u.dispatch.startAt || null; }
       records.push(r); saveRecords();
       sendEvent("record", u.id, r);
-      if (!u.real) applyActsSim(u, acts);
+      simActs(r); flushSim();
       u.dispatch = null;
-      u.verify = {rid:r.rid, ts:now, ticks:0, entry:u.entryId || 0};
+      u.verify = {rid:r.rid, ts:now, entry:u.entryId || 0};
       setStatus(u, statusOf(u), now);
       closeRecord();
       toast(u.id + " 조치를 기록했어요. 센서 확인을 기다리는 중이에요.");
@@ -1416,10 +1796,11 @@
     var today = new Date(); today.setHours(0, 0, 0, 0);
     records = records.filter(function(r){ return r && r.ts >= today.getTime() && r.acts; });
     records.forEach(function(r){
+      var u = byId[r.id]; if (!u) return;
+      if (!u.real) simActs(r);                         // 가상 장치: 기록한 조치를 시뮬레이션에 다시 반영(같은 시각 칸)
       if (r.result !== "wait") return;
-      var u = byId[r.id];
-      if (u && u.real && Date.now() - r.ts < VERIFY_TIMEOUT_MS && !u.verify){ u.verify = {rid:r.rid, ts:r.ts, ticks:0, entry:0}; setStatus(u, "chk", r.ts); }
-      else { r.result = "lost"; r.after = "화면을 새로 열어 시뮬레이션이 다시 시작됨"; r.doneAt = Date.now(); }
+      if (Date.now() - r.ts < VERIFY_TIMEOUT_MS && !u.verify){ u.verify = {rid:r.rid, ts:r.ts, entry:0}; setStatus(u, "chk", r.ts); }
+      else { r.result = "lost"; r.after = "확인 시간이 지남"; r.doneAt = Date.now(); }
     });
     saveRecords();
   })();
@@ -1444,8 +1825,9 @@
   function sendEvent(type, id, data){
     var ev = {eid:CLIENT + "-" + Date.now().toString(36) + "-" + (srv.n++).toString(36), type:type, id:id, client:CLIENT, ts:Date.now(), data:data};
     srv.seen[ev.eid] = true;
-    if (!SHARED) return;
+    if (!SHARED) return ev.eid;
     srv.outbox.push(ev); saveOutbox(); flushOutbox();
+    return ev.eid;
   }
   function flushOutbox(){
     if (!SHARED || srv.sending || !srv.outbox.length || !authValid()) return;   // 로그인 전에는 보관만
@@ -1465,12 +1847,24 @@
       })
       .catch(function(){ srv.sending = false; srv.ok = false; if (view === "field") renderField(); });   // 통신 실패 → 다음 확인 때 다시
   }
+  function todayStart(){ var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
   function findRecord(rid){ for (var i = records.length - 1; i >= 0; i--) if (records[i].rid === rid) return records[i]; return null; }
   function applyEvent(ev){
     if (ev.seq) srv.seq = Math.max(srv.seq, ev.seq);
-    if (srv.seen[ev.eid]) return false;
+    var d = ev.data || {};
+    if (srv.seen[ev.eid]){
+      // 로그인 전(공개 읽기)에 받은 기록은 이름·메모가 빠져 있음 → 로그인 뒤 같은 기록을 받으면 채움
+      if (ev.type === "record" && d.rid){ var old = findRecord(d.rid); if (old && !old.who && d.who){ old.who = d.who; old.memo = d.memo || ""; old.by = ev.by || ""; saveRecords(); return true; } }
+      return false;
+    }
     srv.seen[ev.eid] = true;
-    var u = byId[ev.id], d = ev.data || {}; if (!u) return false;
+    if (ev.type === "demo"){
+      simDemo(d.kind, d.ts || ev.ts, ev.id, ev.eid);
+      actionLog.push({id:ev.id, time:fmtTime(new Date(d.ts || ev.ts)), ts:d.ts || ev.ts, kind:"demo", text:"시연 조작 · " + (DEMO_LABEL[d.kind] || d.kind)});
+      return true;
+    }
+    var u = byId[ev.id]; if (!u) return false;
+    if ((ev.type === "dispatch" || ev.type === "start" || ev.type === "result") && (d.ts || d.doneAt || ev.ts) < todayStart()) return false;
     if (ev.type === "dispatch"){
       if (u.status === "good") return true;
       u.dispatch = {ts:d.ts, to:d.to, note:d.note || "", startAt:null};
@@ -1479,36 +1873,34 @@
       if (u.dispatch && !u.dispatch.startAt) u.dispatch.startAt = d.ts;
       actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출발" + (u.dispatch ? " (" + u.dispatch.to + ")" : "")});
     } else if (ev.type === "record"){
+      if (d.ts < todayStart()){ simActs({id:ev.id, ts:d.ts, rid:d.rid, acts:d.acts || []}); return true; }   // 지난 기록은 시뮬레이션(수납함 상태)에만 반영
       if (findRecord(d.rid)) return true;
       var r = {}; for (var k in d) r[k] = d[k];
       r.id = u.id; r.dong = u.dong; r.result = "wait"; r.by = ev.by || "";
       records.push(r); saveRecords();
+      simActs(r);
       if (!u.verify){                       // 다른 기기의 기록도 이 화면에서 센서 확인을 기다림
-        if (!u.real) applyActsSim(u, r.acts);
         u.dispatch = null;
-        u.verify = {rid:r.rid, ts:r.ts, ticks:0, entry:u.entryId || 0};
+        u.verify = {rid:r.rid, ts:r.ts, entry:u.entryId || 0};
         setStatus(u, statusOf(u), r.ts);
       }
     } else if (ev.type === "result"){
       var rr = findRecord(d.rid); if (!rr) return true;
-      if (u.real && u.verify && u.verify.rid === d.rid) return true;   // 실측 장치(GA-001)는 이 화면이 ThingSpeak 값으로 직접 판단
-      rr.result = d.result; rr.after = d.after; rr.afterSt = d.afterSt; rr.doneAt = d.doneAt;
-      saveRecords();
-      if (u.verify && u.verify.rid === d.rid){   // 기록한 기기의 판단을 따름
-        u.verify = null;
-        if (!u.real && d.result === "ok" && baseStatus(u) !== "good"){ applyActsSim(u, ["box", "inlet"]); u.level = 0.1; u.tier = "NORMAL"; }
-        setStatus(u, statusOf(u), d.doneAt || Date.now());
-      }
+      // 판정은 각 화면이 직접 한다: 실측 장치는 ThingSpeak 값, 가상 장치는 모든 화면에서 같은 시뮬레이션 값.
+      // 다른 기기가 보낸 결과는 이 화면에서 아직 판정하지 못한 기록에만 참고로 채움
+      if (rr.result === "wait" && !(u.verify && u.verify.rid === d.rid)){ rr.result = d.result; rr.after = d.after; rr.afterSt = d.afterSt; rr.doneAt = d.doneAt; saveRecords(); }
     }
     return true;
   }
   function pollServer(done){   // done(true: 성공 / false: 로그인 거절 / null: 통신 실패)
     done = done || function(){};
     if (!SHARED || (document.visibilityState === "hidden" && !arguments.length)) return;
-    if (!authValid()){ if (view === "field") renderField(); done(false); return; }   // 로그인해야 공유 기록을 받음
-    var from = new Date(); from.setHours(0, 0, 0, 0);
-    fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-                       body:JSON.stringify({action:"list", token:auth.token, since:srv.seq, from:from.getTime()})})
+    // 로그인 전: 공개 읽기(장치 상태에 필요한 것만, 이름·메모 없음) / 로그인 후: 이름·메모까지
+    var pub = !authValid();
+    // 가상 장치 수납함은 마지막 정기 청소(최대 2주 전)부터 계산하므로 15일 전 0시부터의 조치·시연 기록을 받음
+    var from = todayStart() - 15 * 86400000;
+    var body = pub ? {action:"pub", since:srv.seq, from:from} : {action:"list", token:auth.token, since:srv.seq, from:from};
+    fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body)})
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (res && !res.ok && res.auth){ authFailed(res.error); done(false); return; }
@@ -1516,6 +1908,7 @@
         srv.ok = true;
         var changed = false;
         (res.events || []).forEach(function(ev){ if (applyEvent(ev)) changed = true; });
+        if (simQueue.length){ flushSim(); SIM.advanceTo(simK(Date.now())); units.forEach(function(u){ if (!u.real) readSim(u); }); }
         if (res.last) srv.seq = Math.max(srv.seq, res.last);
         flushOutbox();
         if (changed || view === "field") render();
@@ -1581,6 +1974,7 @@
     var p = resp && resp.credential && decodeJwt(resp.credential);
     if (!p){ openLogin("로그인 정보를 읽지 못했어요. 다시 시도해 주세요."); return; }
     setAuth(resp.credential);
+    srv.seq = 0;   // 로그인 전 공개 읽기로 받은 기록에 이름·메모를 채우려고 처음부터 다시 받음
     var err = document.getElementById("loginErr");
     err.hidden = false; err.textContent = "학교 계정인지 확인하는 중…";
     // 서버가 학교 계정으로 확인해 준 뒤에만 하려던 일을 이어서 함(거절되면 창에 이유가 보임)
@@ -1713,10 +2107,10 @@
     var needIn = SHARED && !authValid();
     document.getElementById("fLoginP").hidden = !needIn;
     sv.textContent = !SHARED ? "공유 서버 연결 전 · 기록은 이 기기에만 저장"
-      : needIn ? "학교 계정으로 로그인하면 공유 기록을 보고 남길 수 있어요" + (srv.outbox.length ? " (보낼 기록 " + srv.outbox.length + "건 보관 중)" : "")
+      : needIn ? (srv.ok ? "장치 상태는 모든 화면과 같아요 · 기록을 남기거나 담당자 이름을 보려면 학교 계정 로그인" : "공유 서버 연결 중…") + (srv.outbox.length ? " (보낼 기록 " + srv.outbox.length + "건 보관 중)" : "")
       : srv.ok === false ? "공유 서버에 연결하지 못함 · 기록은 이 기기에 보관 후 다시 보냄" + (srv.outbox.length ? " (보낼 기록 " + srv.outbox.length + "건)" : "")
       : srv.ok ? "공유 서버 연결됨 · 기록이 모든 화면에 함께 보임" : "공유 서버 연결 중…";
-    sv.className = "f-meta srv " + (!SHARED || needIn ? "" : srv.ok === false ? "bad" : srv.ok ? "good" : "");
+    sv.className = "f-meta srv " + (!SHARED ? "" : srv.ok === false ? "bad" : srv.ok ? "good" : "");
     document.getElementById("fHint").textContent = hint;
     var html;
     if (fTab === "need"){
@@ -1740,7 +2134,7 @@
           '<div class="f-top">' + badge("chk") + '<span class="f-dur">' + (r ? sinceText(r.ts) + ' 기록' : '') + '</span></div>' +
           '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + '</h2>' +
           (r ? '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
-               '<p class="f-meta">' + hhmm(r.ts) + ' · ' + esc(r.who) + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
+               '<p class="f-meta">' + hhmm(r.ts) + (r.who ? ' · ' + esc(r.who) : '') + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
                '<p class="f-meta">조치 전: ' + LABEL[r.beforeSt] + (r.before ? ' · ' + esc(r.before) : '') + '</p>' +
                (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + '</p>' : '') : '') +
           '<p class="f-meta">' + (u.real ? "실측 장치는 다음 전송(약 15~20초 간격)을 기다립니다." : "가상 장치는 약 10초 뒤 확인됩니다.") + '</p></li>';
@@ -1754,7 +2148,7 @@
           '<div class="f-top">' + b + '<span class="f-dur">' + hhmm(r.ts) + ' 기록 → ' + hhmm(r.doneAt) + '</span></div>' +
           '<h2 class="f-title"><span class="num">' + r.id + '</span> ' + esc(r.dong) + '</h2>' +
           '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
-          '<p class="f-meta">' + esc(r.who) + (r.by ? ' · 기록: ' + esc(r.by) : '') + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
+          (r.who || r.by || r.memo ? '<p class="f-meta">' + esc(r.who || "") + (r.by ? ' · 기록: ' + esc(r.by) : '') + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' : '<p class="f-meta">담당자 이름은 학교 계정으로 로그인하면 보여요</p>') +
           (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + ' → 기록 ' + hhmm(r.ts) + ' → 확인 ' + hhmm(r.doneAt) + '</p>' : '') +
           '<p class="f-meta">결과: ' + esc(r.after || "") + '</p>' +
           (again ? '<div class="f-btns"><button type="button" class="btn primary" data-rec="' + r.id + '">다시 조치 결과 기록</button></div>' : '') + '</li>';
@@ -1835,8 +2229,8 @@
   })();
 
   var KIND = {crit:"위험", warn:"주의", clean:"조치 완료", recover:"정상 복귀", dispatch:"출동 요청", off:"통신 끊김",
-              chk:"조치 확인 대기", fail:"조치 후 이상", lost:"확인 못 함"};
-  var KIND_BADGE = {crit:"crit", warn:"warn", clean:"info", recover:"good", dispatch:"info", off:"off", chk:"chk", fail:"warn", lost:"off"};
+              chk:"조치 확인 대기", fail:"조치 후 이상", lost:"확인 못 함", demo:"시연 조작"};
+  var KIND_BADGE = {crit:"crit", warn:"warn", clean:"info", recover:"good", dispatch:"info", off:"off", chk:"chk", fail:"warn", lost:"off", demo:"off"};
   var ACTION_TYPES = {clean:1, dispatch:1, fail:1, lost:1};   // "조치" 필터에 함께 보이는 종류
   var hFilter = {kind:"all", id:""};
 
@@ -1844,10 +2238,10 @@
     var today = events.filter(function(e){ return e.t >= T0; }).map(function(e){
       return {t:e.t, id:e.id, dong:e.dong, type: e.to === "good" ? "recover" : e.to, why:e.why};
     });
-    var acts = actionLog.map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id].dong, type:l.kind, why:l.text}; });
+    var acts = actionLog.map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id] ? byId[l.id].dong : "관악구 전체", type:l.kind, why:l.text}; });
     // 현장 조치 기록: 센서로 확인된 결과만 (확인 중인 것은 상태 변화 "조치 확인 대기"로 보임)
     var field = records.filter(function(r){ return r.result !== "wait"; }).map(function(r){
-      var what = r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + " (" + r.who + ")" + (r.memo ? " · " + r.memo : "");
+      var what = r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.who ? " (" + r.who + ")" : "") + (r.memo ? " · " + r.memo : "");
       if (r.result === "ok") return {t:r.doneAt, id:r.id, dong:r.dong, type:"clean", why:"현장 조치 · 센서로 정상 확인 · " + what, resp: r.since ? r.doneAt - r.since : null};
       return {t:r.doneAt, id:r.id, dong:r.dong, type:r.result, why:what + " → " + (r.after || "")};
     });
@@ -2302,26 +2696,24 @@
     s.scrollIntoView({behavior:"smooth", block:"start"}); s.focus({preventScroll:true});
   });
 
-  document.getElementById("btnTrigger").addEventListener("click", function(){
-    var u = byId["GA-002"];
-    var t = Date.now();
-    u.target = 9.7; u.level = 9.7; u.tier = "OVERFLOW";
-    u.tier1At = t - 8000; u.riseSeconds = 8;
-    setStatus(u, "crit", t); u.updated = new Date();
-    selectedId = u.id;
+  // 시연 조작: 서버를 거쳐 모든 화면에 같은 시각으로 반영(공유 서버를 쓰면 로그인 필요)
+  var DEMO_LABEL = {scenario:"호우 시나리오 시작(3시간)", storm:"GA-002 주변 국지성 폭우", boxfull:"GA-002 수납함 가득 참", reset:"전체 정상으로 되돌리기"};
+  function runDemo(kind){
+    if (needLogin(function(){ runDemo(kind); })) return;
+    var t = Date.now(), id = kind === "reset" || kind === "scenario" ? "GA-000" : "GA-002";
+    var eid = sendEvent("demo", id, {kind:kind, ts:t});
+    simDemo(kind, t, id, eid); flushSim();
+    actionLog.push({id:id, time:fmtTime(new Date(t)), ts:t, kind:"demo", text:"시연 조작 · " + DEMO_LABEL[kind]});
+    SIM.advanceTo(simK(Date.now()));
+    units.forEach(function(u){ if (u.real) return; readSim(u); var b = u.status; setStatus(u, statusOf(u), u.simSince); if (b !== u.status && u.status !== "chk") u.since = u.simSince; });
+    if (kind === "storm" || kind === "boxfull") selectedId = "GA-002";
+    toast(DEMO_LABEL[kind] + (SHARED ? " · 모든 화면에 함께 적용돼요." : "."));
     render();
-  });
-  document.getElementById("btnReset").addEventListener("click", function(){
-    var t = Date.now();
-    units.forEach(function(u){
-      if (u.real) return;
-      u.target = 0.05; u.level = 0.05; u.tier = "NORMAL"; u.riseSeconds = null; u.tier1At = null;
-      if (u.fill1 >= 80) u.fill1 = 20; if (u.fill2 >= 80) u.fill2 = 20;
-      u.full1 = false; u.full2 = false;
-      setStatus(u, statusOf(u), t);
-    });
-    render();
-  });
+  }
+  document.getElementById("btnScenario").addEventListener("click", function(){ runDemo("scenario"); });
+  document.getElementById("btnStorm").addEventListener("click", function(){ runDemo("storm"); });
+  document.getElementById("btnTrigger").addEventListener("click", function(){ runDemo("boxfull"); });
+  document.getElementById("btnReset").addEventListener("click", function(){ runDemo("reset"); });
 
   document.getElementById("oFull").addEventListener("click", function(){
     try {
@@ -2358,7 +2750,9 @@
   }
   measureSticky();
   setTimeout(refreshMaps, 0);
-  setInterval(function(){ units.forEach(step); render(); }, 4000);
+  setTimeout(simTick, Math.max(200, (simK(Date.now()) + 1) * SIM_STEP_MS - Date.now() + 30));
+  // 점검용(읽기 전용): 지금 시각 칸과 장치별 상태. 다른 화면과 값이 같은지 비교할 때 콘솔에서 drainSim() 실행
+  window.drainSim = function(){ return {k:SIM.k(), units:units.map(function(u){ return [u.id, u.status, +u.level.toFixed(2), Math.round(u.fill1), Math.round(u.fill2), u.blocked]; })}; };
   pollThingSpeak();
   setInterval(pollThingSpeak, TS_POLL_MS);
   if (SHARED){
