@@ -155,6 +155,13 @@
   .view{padding-block:32px 64px;display:flex;flex-direction:column;gap:24px}
   .page-head{display:flex;flex-direction:column;gap:4px}
   .meta{color:var(--text-2);font-size:.9375rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* 데이터 출처·갱신 시각: 어디서 온 값이 언제 것인지 (센서·강수량·현장 기록) */
+  .srcs{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 8px;font-size:.875rem;color:var(--text-2)}
+  .srcs li{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface)}
+  .srcs b{color:var(--text);font-weight:700}
+  .srcs .dot{width:7px;height:7px;border-radius:50%;background:var(--ok-icon);flex:none}
+  .srcs .dot.on{background:#1f8f4e}
+  .srcs .dot.bad{background:var(--crit-icon)}
   .live{width:8px;height:8px;border-radius:50%;background:var(--primary)}
 
   .infobox{display:flex;gap:8px;align-items:flex-start;padding:16px 24px;border-radius:10px;background:var(--info-bg);border:1px solid var(--info-border);color:var(--text);font-size:.9375rem}
@@ -397,6 +404,29 @@
   /* 조치 결과 기록 창 */
   .rec-dlg{border:1px solid var(--border);border-radius:12px;padding:0;width:min(34rem,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--surface);color:var(--text)}
   .rec-dlg::backdrop{background:rgba(0,0,0,.55)}
+  /* 근무 교대 인계서 */
+  .ho-dlg{width:min(52rem,calc(100vw - 24px))}
+  .ho-doc{overflow-x:auto}
+  .ho-doc h2{text-align:center;font-size:1.5rem;margin:0 0 4px}
+  .ho-doc .ho-sub{text-align:center;color:var(--text-2);font-size:.875rem;margin:0 0 16px}
+  .ho-doc h3{font-size:1.0625rem;margin:18px 0 8px}
+  .ho-doc table{width:100%;border-collapse:collapse;font-size:.9375rem}
+  .ho-doc th,.ho-doc td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+  .ho-doc th{background:var(--surface-2);font-weight:700;white-space:nowrap}
+  .ho-doc td.num{text-align:right}
+  .ho-doc .ho-meta{border-top:2px solid var(--text);border-bottom:1px solid var(--text)}
+  .ho-doc .ho-sign td{height:52px}
+  .ho-fill{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .ho-fill .ho-wide{grid-column:1/-1}
+  .ho-fill input,.ho-fill textarea{width:100%}
+  #printArea{display:none}
+  @media print{
+    body > *:not(#printArea){display:none!important}
+    #printArea{display:block!important;color:#000;background:#fff;font-size:11pt}
+    #printArea .ho-doc th,#printArea .ho-doc td{border-color:#666}
+    #printArea .ho-doc th{background:#eee}
+    @page{size:A4;margin:16mm}
+  }
   .rec-dlg form{display:flex;flex-direction:column;gap:16px;padding:24px}
   .rec-dlg h2{margin:0;font-size:1.375rem}
   .rec-dev{margin:0;color:var(--text-2)}
@@ -527,6 +557,7 @@
     <div class="page-head">
       <h1>관악구 빗물받이 모니터링</h1>
       <p class="meta"><span class="live" aria-hidden="true"></span>담당자 화면 · 마지막 갱신 <time id="clock" class="num">--:--:--</time></p>
+      <ul class="srcs" id="dataSrc" aria-label="데이터 출처와 갱신 시각"></ul>
     </div>
 
     <p class="infobox">
@@ -714,6 +745,7 @@
       <div class="o-right">
         <p class="o-clock" id="oClock">--:--:--</p>
         <button type="button" class="btn sm" id="oFull">전체 화면으로 보기</button>
+        <button type="button" class="btn sm" id="oHandover">근무 교대 인계서</button>
       </div>
     </div>
     <div class="o-body">
@@ -768,8 +800,60 @@
       <label class="chk-opt"><input type="radio" name="dspTo" value="청소업체">청소업체 (수납함 수거·준설)</label>
     </fieldset>
     <div><label class="fl" for="dspNote">요청 내용 (선택)</label><input type="text" id="dspNote" maxlength="60" placeholder="예) 수납함1 가득 참, 비 오기 전 수거"></div>
-    <p class="rec-note">요청하면 현장 화면 맨 위에 보이고, 담당자가 「출발」을 누르면 여기에도 "출동 중"으로 바뀝니다. 역할 이름은 서울시 빗물받이 관리대책(2024)에 나오는 이름이며, 실제 배정 방식은 구청마다 다를 수 있습니다.</p>
+    <p class="rec-note">요청하면 현장 화면 맨 위에 보이고, 담당자가 「접수」하면 "접수됨"(접수 시각·번호), 「출발」을 누르면 "출동 중"으로 바뀝니다. 역할 이름은 서울시 빗물받이 관리대책(2024)에 나오는 이름이며, 실제 배정 방식은 구청마다 다를 수 있습니다.</p>
     <div class="rec-btns"><button type="button" class="btn" id="dspCancel">취소</button><button type="submit" class="btn primary" id="dspOk">출동 요청</button></div>
+  </form>
+</dialog>
+<dialog class="rec-dlg ho-dlg" id="hoDlg" aria-labelledby="hoH">
+  <form id="hoForm" method="dialog">
+    <div id="hoDoc"></div>
+    <div class="ho-fill no-print">
+      <div><label class="fl" for="hoFrom">인계자</label><input type="text" id="hoFrom" maxlength="20" placeholder="예) 상황실 1조 조소진"></div>
+      <div><label class="fl" for="hoTo">인수자</label><input type="text" id="hoTo" maxlength="20" placeholder="예) 상황실 2조"></div>
+      <div class="ho-wide"><label class="fl" for="hoNote">특이사항 (선택)</label><textarea id="hoNote" rows="3" maxlength="300" placeholder="예) GA-005 수위 하강 중, 다음 근무조 재확인 필요"></textarea></div>
+    </div>
+    <p class="rec-note no-print">근무를 넘길 때 지금 열려 있는 일을 한 장으로 정리합니다(행정업무규정 시행규칙 제45조 업무 인계·인수). 「인쇄 · PDF 저장」에서 대상을 「PDF로 저장」으로 고르면 파일로 남길 수 있어요.</p>
+    <div class="rec-btns no-print"><button type="button" class="btn" id="hoClose">닫기</button><button type="button" class="btn primary" id="hoPrint">인쇄 · PDF 저장</button></div>
+  </form>
+</dialog>
+<div id="printArea" aria-hidden="true"></div>
+<dialog class="rec-dlg" id="trDlg" aria-labelledby="trH">
+  <form id="trForm" novalidate>
+    <h2 id="trH">다른 담당에게 넘기기</h2>
+    <p class="rec-dev" id="trDev"></p>
+    <fieldset id="trTo">
+      <legend>누구에게 넘길까요?</legend>
+      <label class="chk-opt"><input type="radio" name="trTo" value="현장기동반">현장기동반</label>
+      <label class="chk-opt"><input type="radio" name="trTo" value="빗물받이 전담관리자">빗물받이 전담관리자</label>
+      <label class="chk-opt"><input type="radio" name="trTo" value="청소업체">청소업체</label>
+    </fieldset>
+    <div><label class="fl" for="trReason">넘기는 사유 (필수)</label><input type="text" id="trReason" maxlength="60" placeholder="예) 수납함 수거가 필요해 청소업체 소관" aria-describedby="trErr"></div>
+    <p class="rec-err" id="trErr" hidden>넘기는 사유를 적어 주세요.</p>
+    <p class="rec-note">소관이 아닌 요청을 받았을 때 맡을 담당에게 넘깁니다(행정업무규정 시행규칙 제16조의 이송). 넘긴 기록과 사유는 지워지지 않고 남습니다.</p>
+    <div class="rec-btns"><button type="button" class="btn" id="trCancel">취소</button><button type="submit" class="btn primary" id="trOk">넘기기</button></div>
+  </form>
+</dialog>
+<dialog class="rec-dlg" id="corDlg" aria-labelledby="corH">
+  <form id="corForm" novalidate>
+    <h2 id="corH">조치 기록 정정</h2>
+    <p class="rec-dev" id="corDev"></p>
+    <fieldset id="corKind">
+      <legend>어떻게 정정할까요?</legend>
+      <label class="chk-opt"><input type="radio" name="corKind" value="edit" checked>한 일을 고쳐 적기</label>
+      <label class="chk-opt"><input type="radio" name="corKind" value="cancel">기록 취소 (잘못 남김 · 다른 장치에 기록함)</label>
+    </fieldset>
+    <fieldset id="corActs">
+      <legend>실제로 한 일 (해당하는 것 모두)</legend>
+      <label class="chk-opt"><input type="checkbox" name="cact" value="box">수납함 비움</label>
+      <label class="chk-opt"><input type="checkbox" name="cact" value="inlet">입구 이물질 제거</label>
+      <label class="chk-opt"><input type="checkbox" name="cact" value="cover">덮개·장애물 치움</label>
+      <label class="chk-opt"><input type="checkbox" name="cact" value="check">점검만 함 (이상 없음)</label>
+      <label class="chk-opt"><input type="checkbox" name="cact" value="repair">고장 · 수리 필요</label>
+    </fieldset>
+    <div><label class="fl" for="corReason">정정 사유 (필수)</label><input type="text" id="corReason" maxlength="60" placeholder="예) 수납함2는 비우지 못했음" aria-describedby="corErr"></div>
+    <p class="rec-err" id="corErr" hidden></p>
+    <p class="rec-note">원래 기록은 지우지 않고 줄을 그어 남기고, 정정한 사람·사유·시각을 함께 남깁니다(행정업무규정 시행규칙 제14조).</p>
+    <div class="rec-btns"><button type="button" class="btn" id="corCancel">취소</button><button type="submit" class="btn primary" id="corOk">정정하기</button></div>
   </form>
 </dialog>
 <dialog class="rec-dlg" id="recDlg" aria-labelledby="recH">
@@ -1355,6 +1439,28 @@
       return true;
     }
     function addEvent(ev){ return addEvents([ev]); }
+    function rewindFrom(minK){
+      if (!(S.u.length && minK <= S.k)) return;
+      var kNow = S.k, best = null;
+      if (minK > S.anchor){
+        for (var n = snaps.length - 1; n >= 0; n--){
+          var sk = Number(snaps[n].slice(5, snaps[n].indexOf(",")));
+          if (sk < minK){ best = JSON.parse(snaps[n]); snaps.length = n + 1; break; }
+        }
+      }
+      if (best) S = best; else startPeriod(S.anchor);
+      for (var k = S.k + 1; k <= kNow; k++) stepAll(k);
+    }
+    // 조치 기록 정정: 그 기록의 이벤트를 새 한 일로 바꾸거나(acts) 없앰(null). 같은 시각 칸 그대로, 되감아 다시 계산
+    function replaceActs(key, acts){
+      var old = null; events.forEach(function(e){ if (e.key === key) old = e; });
+      if (!old) return false;
+      if (acts){ if (JSON.stringify(old.acts) === JSON.stringify(acts)) return false; old.acts = acts.slice(); }
+      else events = events.filter(function(e){ return e.key !== key; });
+      delete S.results[old.rid];
+      rewindFrom(old.k);
+      return true;
+    }
     // 실측 강수량 표를 받으면 구간 처음부터 다시 계산(표가 바뀌었을 때만)
     function setRain(table){
       var j = table ? JSON.stringify(table) : "";
@@ -1365,7 +1471,7 @@
     }
     function nextClean(i, t){ return lastCleanAt(i, t + CLEAN_EVERY_DAYS * SIM_DAY); }
     return {
-      advanceTo:advanceTo, addEvent:addEvent, addEvents:addEvents, setRain:setRain, realRain:function(){ return !!realRain; },
+      advanceTo:advanceTo, addEvent:addEvent, addEvents:addEvents, replaceActs:replaceActs, setRain:setRain, realRain:function(){ return !!realRain; },
       unit:function(i){ return S.u[i]; }, k:function(){ return S.k; }, anchor:function(){ return S.anchor; },
       log:function(){ return S.log; }, result:function(rid){ return S.results[rid] || null; },
       params:function(i){ return P[i]; }, hasEvent:function(key){ return events.some(function(e){ return e.key === key; }); },
@@ -1540,7 +1646,9 @@
   var simQueue = [];
   function simActs(r){
     var u = byId[r.id]; if (!u || u.real) return;
-    simQueue.push({k:simK(r.ts), key:"rec:" + r.rid, kind:"acts", i:u.idx, acts:r.acts.slice(), rid:r.rid});
+    if (r.corr && r.corr.kind === "cancel") return;
+    var acts = r.corr && r.corr.kind === "edit" ? r.corr.acts : r.acts;
+    simQueue.push({k:simK(r.ts), key:"rec:" + r.rid, kind:"acts", i:u.idx, acts:acts.slice(), rid:r.rid});
   }
   function simDemo(kind, ts, id, key){
     var u = byId[id] || byId["GA-002"];
@@ -1569,6 +1677,22 @@
   function districtRain(){
     var n = 0, r = 0; units.forEach(function(u){ if (!u.real){ r += u.rain || 0; n++; } });
     return n ? r / n : 0;
+  }
+  // 데이터 출처와 갱신 시각 (모니터링 화면 위쪽)
+  function renderSources(){
+    var el = document.getElementById("dataSrc"); if (!el) return;
+    var ru = byId[REAL_UNIT_ID], items = [];
+    var sensor = tsInfo.ok === false ? '<span class="dot bad"></span><b>센서 GA-001</b> ThingSpeak · 읽기 실패'
+      : ru.everData ? '<span class="dot ' + (ru.offline ? 'bad' : 'on') + '"></span><b>센서 GA-001</b> ThingSpeak · ' + fmtTime(ru.updated) + ' 수신' + (ru.offline ? '(1분 넘게 새 값 없음)' : '')
+      : '<span class="dot"></span><b>센서 GA-001</b> ThingSpeak · 첫 값 기다리는 중';
+    items.push(sensor);
+    items.push(SIM.realRain() && rainInfo.latest
+      ? '<span class="dot on"></span><b>강수량</b> 기상청 · ' + mdhm(rainInfo.latest) + '까지 관측 (' + hhmm(rainInfo.updated) + ' 확인)'
+      : '<span class="dot"></span><b>강수량</b> ' + (SHARED ? '기상청 연결 전 · 장마철 가정' : '장마철 가정(시뮬레이션)'));
+    if (SHARED) items.push(srv.lastOk ? '<span class="dot ' + (srv.ok === false ? 'bad' : 'on') + '"></span><b>현장 기록</b> 공유 서버 · ' + fmtTime(new Date(srv.lastOk)) + ' 확인'
+                                      : '<span class="dot"></span><b>현장 기록</b> 공유 서버 연결 중');
+    items.push('<span class="dot"></span><b>가상 장치 49대</b> 시뮬레이션 · 4초마다');
+    el.innerHTML = items.map(function(h){ return '<li>' + h + '</li>'; }).join("");
   }
   function rainTag(){ return SIM.realRain() ? "(기상청 실측 기반)" : "(시뮬레이션)"; }
   function maxRainUnit(){ var m = null; units.forEach(function(u){ if (!u.real && (!m || u.rain > m.rain)) m = u; }); return m || {rain:0, dong:""}; }
@@ -1727,7 +1851,7 @@
     document.getElementById("oList").innerHTML = shown.length ? shown.map(function(u){
       return '<li class="o-item ' + u.status + '">' + icon(u.status, 28).replace('<svg', '<svg class="ic"') +
         '<span class="who">' + u.id + ' ' + esc(u.dong) + '</span>' +
-        '<span class="why">' + LABEL[u.status] + ' · ' + reasonOf(u) + (u.dispatch ? ' · ' + (u.dispatch.startAt ? '출동 중' : '출동 요청됨') : '') + '</span>' +
+        '<span class="why">' + LABEL[u.status] + ' · ' + reasonOf(u) + (u.dispatch ? ' · ' + dispatchStage(u.dispatch) : '') + '</span>' +
         '<span class="dur">' + durText(u).replace("째", "") + '<small>지속</small></span></li>';
     }).join("") + (att.length > 6 ? '<li class="o-more">외 ' + (att.length - 6) + '대는 모니터링 화면에서 확인</li>' : '')
       : '<li class="empty">모든 장치 정상</li>';
@@ -1744,8 +1868,19 @@
   // 담당자가 "조치 결과 기록"을 남기면 바로 정상 처리하지 않고 "조치 확인 대기"로 두었다가,
   // 센서가 다음 값을 보내 정상이면 확인 완료, 아니면 "조치 후에도 이상"으로 다시 알린다.
   // 서버(Apps Script) 연결 전까지는 이 브라우저에만 저장된다.
+  // 정정된 기록: 원래 한 일은 줄을 그어 남기고 정정 내용을 함께 보여 줌(시행규칙 제14조)
+  function actsHtml(r){
+    var orig = r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ");
+    if (!r.corr) return orig;
+    return '<del>' + orig + '</del> ' + (r.corr.kind === "cancel" ? '<b>기록 취소</b>' : '→ <b>' + r.corr.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</b>');
+  }
+  function corrHtml(r){
+    if (!r.corr) return '';
+    return '<p class="f-meta">정정 ' + hhmm(r.corr.ts) + (r.corr.by ? ' · ' + esc(r.corr.by) : '') + ' · 사유: ' + (r.corr.reason ? esc(r.corr.reason) : '학교 계정으로 로그인하면 보여요') + '</p>';
+  }
   function recordText(r){
-    var s = "조치 기록 · " + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.who ? " (" + esc(r.who) + ")" : "");
+    var s = "조치 기록 · " + actsHtml(r) + (r.who ? " (" + esc(r.who) + ")" : "");
+    if (r.corr) return s + " · 정정 " + hhmm(r.corr.ts) + (r.corr.reason ? ", 사유: " + esc(r.corr.reason) : "");
     if (r.result === "wait") return s + " → 센서 확인 중";
     if (r.result === "ok") return s + " → 정상 확인 " + hhmm(r.doneAt);
     if (r.result === "fail") return s + " → 조치 후에도 이상: " + esc(r.after);
@@ -1827,7 +1962,7 @@
       var r = {rid:now + "-" + u.id, id:u.id, dong:u.dong, ts:now, who:who || "현장 담당자", acts:acts,
                memo:document.getElementById("recMemo").value.trim(), beforeSt:u.status, before:reasonOf(u), since:u.since, result:"wait", client:CLIENT,
                by:(SHARED && auth.name) || ""};
-      if (u.dispatch){ r.reqAt = u.dispatch.ts; r.reqTo = u.dispatch.to; r.startAt = u.dispatch.startAt || null; }
+      if (u.dispatch){ r.reqAt = u.dispatch.ts; r.reqTo = u.dispatch.to; r.accAt = u.dispatch.accAt || null; r.startAt = u.dispatch.startAt || null; }
       records.push(r); saveRecords();
       sendEvent("record", u.id, r);
       simActs(r); flushSim();
@@ -1907,8 +2042,11 @@
     if (ev.seq) srv.seq = Math.max(srv.seq, ev.seq);
     var d = ev.data || {};
     if (srv.seen[ev.eid]){
+      // 이 기기가 보낸 접수는 서버 번호가 돌아올 때 접수번호를 채움
+      if (ev.type === "accept" && ev.seq){ var ua = byId[ev.id]; if (ua && ua.dispatch && ua.dispatch.accAt === d.ts && !ua.dispatch.accNo){ ua.dispatch.accNo = "접수-" + ev.seq; return true; } }
       // 로그인 전(공개 읽기)에 받은 기록은 이름·메모가 빠져 있음 → 로그인 뒤 같은 기록을 받으면 채움
       if (ev.type === "record" && d.rid){ var old = findRecord(d.rid); if (old && !old.who && d.who){ old.who = d.who; old.memo = d.memo || ""; old.by = ev.by || ""; saveRecords(); return true; } }
+      if (ev.type === "correct" && d.rid && d.reason){ var oc = findRecord(d.rid); if (oc && oc.corr && !oc.corr.reason){ oc.corr.reason = d.reason; oc.corr.by = ev.by || ""; saveRecords(); return true; } }
       return false;
     }
     srv.seen[ev.eid] = true;
@@ -1920,9 +2058,16 @@
     var u = byId[ev.id]; if (!u) return false;
     if ((ev.type === "dispatch" || ev.type === "start" || ev.type === "result") && (d.ts || d.doneAt || ev.ts) < todayStart()) return false;
     if (ev.type === "dispatch"){
-      if (u.status === "good") return true;
       u.dispatch = {ts:d.ts, to:d.to, note:d.note || "", startAt:null};
       actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출동 요청 → " + d.to + (d.note ? " · " + d.note : "")});
+    } else if (ev.type === "accept"){
+      if (u.dispatch && !u.dispatch.accAt){ u.dispatch.accAt = d.ts; u.dispatch.accNo = ev.seq ? "접수-" + ev.seq : ""; }
+      actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"출동 요청 접수 (" + d.to + ")" + (ev.seq ? " · 접수-" + ev.seq : "")});
+    } else if (ev.type === "transfer"){
+      if (u.dispatch){ u.dispatch.to = d.to; u.dispatch.accAt = null; u.dispatch.accNo = ""; u.dispatch.startAt = null; }
+      actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"출동 요청 이송 " + d.from + " → " + d.to + (d.reason ? " · " + d.reason : "")});
+    } else if (ev.type === "correct"){
+      applyCorrection(u, d.rid, {kind:d.kind, acts:d.acts, reason:d.reason || "", ts:d.ts, by:ev.by || ""});
     } else if (ev.type === "start"){
       if (u.dispatch && !u.dispatch.startAt) u.dispatch.startAt = d.ts;
       actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출발" + (u.dispatch ? " (" + u.dispatch.to + ")" : "")});
@@ -1952,7 +2097,8 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res || !res.ok || !res.rain) return;
-        rainInfo.ok = true; rainInfo.updated = res.updated || 0; rainInfo.source = res.source || "";
+        rainInfo.ok = true; rainInfo.updated = res.updated || Date.now(); rainInfo.source = res.source || "";
+        rainInfo.latest = Object.keys(res.rain).reduce(function(m, k){ return Math.max(m, +k); }, 0);
         if (SIM.setRain(res.rain)){ units.forEach(function(u){ if (!u.real) readSim(u); }); render(); }
       })
       .catch(function(){});
@@ -1971,10 +2117,15 @@
       .then(function(res){
         if (res && !res.ok && res.auth){ authFailed(res.error); done(false); return; }
         if (!res || !res.ok) throw new Error((res && res.error) || "응답 오류");
-        srv.ok = true;
+        srv.ok = true; srv.lastOk = Date.now();
         var changed = false;
         (res.events || []).forEach(function(ev){ if (applyEvent(ev)) changed = true; });
         if (simQueue.length){ flushSim(); SIM.advanceTo(simK(Date.now())); units.forEach(function(u){ if (!u.real) readSim(u); }); }
+        // 상태를 바로 맞추고, 출동 요청 뒤에 이미 정상이 된 장치의 출동 표시는 정리
+        units.forEach(function(u){
+          if (!u.real && !u.verify){ var b0 = u.status; setStatus(u, statusOf(u), u.simSince); if (b0 !== u.status) u.since = u.simSince; }
+          if (u.dispatch && u.status === "good" && u.since >= u.dispatch.ts) u.dispatch = null;
+        });
         if (res.last) srv.seq = Math.max(srv.seq, res.last);
         flushOutbox();
         if (changed || view === "field") render();
@@ -2106,8 +2257,15 @@
 
   // ---------- 출동 요청 → 출발 ----------
   // 단계: 출동 요청됨(누구에게) → 출동 중(현장 담당자가 「출발」) → 조치 결과 기록 → 조치 확인 대기 → 확인
+  // 단계: 출동 요청됨 → 접수됨(현장 담당자 「접수」, 시행규칙 제15조) → 출동 중(「출발」)
+  function dispatchStage(d){ return d.startAt ? "출동 중" : (d.accAt ? "접수됨" : "출동 요청됨"); }
   function dispatchText(d){
-    return d.startAt ? "출동 중 · " + esc(d.to) + " · " + hhmm(d.startAt) + " 출발" : "출동 요청됨 · " + esc(d.to) + " · " + hhmm(d.ts) + " (출발 전)";
+    if (d.startAt) return "출동 중 · " + esc(d.to) + " · " + hhmm(d.startAt) + " 출발";
+    if (d.accAt) return "접수됨 · " + esc(d.to) + " · " + hhmm(d.accAt) + " 접수" + (d.accNo ? " (" + esc(d.accNo) + ")" : "") + " · 출발 전";
+    return "출동 요청됨 · " + esc(d.to) + " · " + hhmm(d.ts) + " (접수 전)";
+  }
+  function dispatchFlow(d){
+    return hhmm(d.ts) + ' 요청' + (d.accAt ? ' → ' + hhmm(d.accAt) + ' 접수' + (d.accNo ? '(' + esc(d.accNo) + ')' : '') : '') + (d.startAt ? ' → ' + hhmm(d.startAt) + ' 출발' : '');
   }
   var dspFor = null, dspOpener = null, dspDlg = document.getElementById("dspDlg");
   function openDispatch(id, opener){
@@ -2152,6 +2310,161 @@
     render();
   }
 
+  // 출동 요청 접수 (시행규칙 제15조: 받은 문서는 접수하고 접수번호·일시를 남김)
+  function acceptDispatch(id){
+    if (needLogin(function(){ acceptDispatch(id); })) return;
+    var u = byId[id]; if (!u || !u.dispatch || u.dispatch.accAt) return;
+    var now = Date.now();
+    u.dispatch.accAt = now; u.dispatch.accNo = "";
+    sendEvent("accept", u.id, {ts:now, to:u.dispatch.to});
+    actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"출동 요청 접수 (" + u.dispatch.to + ")"});
+    toast(u.id + " 출동 요청을 접수했어요. 접수번호는 서버에 저장되면 붙어요.");
+    render();
+  }
+  // 다른 담당에게 넘기기 (시행규칙 제16조: 소관이 아닌 문서는 소관 부서로 이송)
+  var trFor = null, trOpener = null, trDlg = document.getElementById("trDlg");
+  function openTransfer(id, opener){
+    if (needLogin(function(){ openTransfer(id, opener); })) return;
+    var u = byId[id]; if (!u || !u.dispatch) return;
+    trFor = id; trOpener = opener || null;
+    document.getElementById("trDev").innerHTML = '<b>' + u.id + ' ' + esc(u.dong) + '</b> · 지금 담당: ' + esc(u.dispatch.to);
+    document.querySelectorAll('#trForm input[name="trTo"]').forEach(function(r){ r.checked = false; r.disabled = r.value === u.dispatch.to; r.closest("label").hidden = r.value === u.dispatch.to; });
+    var first = document.querySelector('#trForm input[name="trTo"]:not(:disabled)'); if (first) first.checked = true;
+    document.getElementById("trReason").value = ""; document.getElementById("trErr").hidden = true;
+    var ok = document.getElementById("trOk"); ok.disabled = false; ok.textContent = "넘기기";
+    if (trDlg.showModal) trDlg.showModal(); else trDlg.setAttribute("open", "");
+    if (first) first.focus();
+  }
+  function closeTransfer(){ if (trDlg.open){ if (trDlg.close) trDlg.close(); else trDlg.removeAttribute("open"); } }
+  trDlg.addEventListener("close", function(){ var o = trOpener; trOpener = null; if (o && document.body.contains(o)) o.focus(); });
+  document.getElementById("trCancel").addEventListener("click", closeTransfer);
+  document.getElementById("trForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var ok = document.getElementById("trOk"); if (ok.disabled) return;
+    var u = byId[trFor]; if (!u || !u.dispatch){ closeTransfer(); return; }
+    var to = (document.querySelector('#trForm input[name="trTo"]:checked') || {}).value;
+    var reason = document.getElementById("trReason").value.trim();
+    if (!reason){ var er = document.getElementById("trErr"); er.hidden = false; document.getElementById("trReason").focus(); return; }
+    if (!to) return;
+    var now = Date.now(), from = u.dispatch.to;
+    u.dispatch.to = to; u.dispatch.accAt = null; u.dispatch.accNo = ""; u.dispatch.startAt = null;
+    sendEvent("transfer", u.id, {ts:now, from:from, to:to, reason:reason});
+    actionLog.push({id:u.id, time:fmtTime(new Date(now)), ts:now, kind:"dispatch", text:"출동 요청 이송 " + from + " → " + to + " · " + reason});
+    closeTransfer();
+    toast(u.id + " 출동 요청을 " + to + "에 넘겼어요.");
+    render();
+  });
+  // 조치 기록 정정 (시행규칙 제14조: 원래 내용을 알 수 있게 남기고, 고친 사람이 표시)
+  var corFor = null, corOpener = null, corDlg = document.getElementById("corDlg");
+  function openCorrect(rid, opener){
+    if (needLogin(function(){ openCorrect(rid, opener); })) return;
+    var r = findRecord(rid); if (!r) return;
+    corFor = rid; corOpener = opener || null;
+    document.getElementById("corDev").innerHTML = '<b>' + esc(r.id) + ' ' + esc(r.dong || "") + '</b> · ' + hhmm(r.ts) + ' 기록 · ' + actsHtml(r);
+    document.querySelector('#corForm input[value="edit"]').checked = true;
+    var cur = r.corr && r.corr.kind === "edit" ? r.corr.acts : r.acts;
+    document.querySelectorAll('#corActs input').forEach(function(c){ c.checked = cur.indexOf(c.value) >= 0; });
+    document.getElementById("corActs").hidden = false;
+    document.getElementById("corReason").value = ""; document.getElementById("corErr").hidden = true;
+    var ok = document.getElementById("corOk"); ok.disabled = false; ok.textContent = "정정하기";
+    if (corDlg.showModal) corDlg.showModal(); else corDlg.setAttribute("open", "");
+    document.querySelector('#corForm input[name="corKind"]:checked').focus();
+  }
+  function closeCorrect(){ if (corDlg.open){ if (corDlg.close) corDlg.close(); else corDlg.removeAttribute("open"); } }
+  corDlg.addEventListener("close", function(){ var o = corOpener; corOpener = null; if (o && document.body.contains(o)) o.focus(); });
+  document.getElementById("corCancel").addEventListener("click", closeCorrect);
+  document.getElementById("corKind").addEventListener("change", function(){
+    document.getElementById("corActs").hidden = document.querySelector('#corForm input[name="corKind"]:checked').value === "cancel";
+  });
+  document.getElementById("corForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var ok = document.getElementById("corOk"); if (ok.disabled) return;
+    var r = findRecord(corFor); if (!r){ closeCorrect(); return; }
+    var kind = document.querySelector('#corForm input[name="corKind"]:checked').value;
+    var acts = [].slice.call(document.querySelectorAll('#corActs input:checked')).map(function(c){ return c.value; });
+    var reason = document.getElementById("corReason").value.trim(), er = document.getElementById("corErr");
+    if (kind === "edit" && !acts.length){ er.textContent = "실제로 한 일을 하나 이상 골라 주세요."; er.hidden = false; return; }
+    if (!reason){ er.textContent = "정정 사유를 적어 주세요."; er.hidden = false; document.getElementById("corReason").focus(); return; }
+    var now = Date.now(), u = byId[r.id];
+    var c = {kind:kind, acts:kind === "edit" ? acts : null, reason:reason, ts:now, by:(SHARED && auth.name) || ""};
+    sendEvent("correct", r.id, {rid:r.rid, kind:kind, acts:c.acts, reason:reason, ts:now});
+    applyCorrection(u, r.rid, c);
+    closeCorrect();
+    toast(r.id + " 기록을 " + (kind === "cancel" ? "취소" : "정정") + "했어요. 원래 기록은 줄을 그어 남겨 두었어요.");
+    render();
+  });
+  function applyCorrection(u, rid, c){
+    var r = findRecord(rid);
+    if (r){
+      r.corr = c;
+      if (u && u.verify && u.verify.rid === rid && c.kind === "cancel"){ u.verify = null; setStatus(u, statusOf(u), c.ts); }
+      saveRecords();
+    }
+    if (u && !u.real){
+      flushSim();
+      if (SIM.replaceActs("rec:" + rid, c.kind === "cancel" ? null : c.acts)){
+        units.forEach(function(x){ if (!x.real) readSim(x); });
+        var res = SIM.result(rid);
+        if (r && res && c.kind === "edit" && !(u.verify && u.verify.rid === rid)){
+          r.result = res.result; r.afterSt = res.st; r.after = res.result === "ok" ? "정상" + (res.why ? " · " + res.why : "") : LABEL[res.st] + " · " + res.why;
+          saveRecords();
+        }
+      }
+    }
+    actionLog.push({id:(u && u.id) || "", time:fmtTime(new Date(c.ts)), ts:c.ts, kind:"dispatch", text:"조치 기록 " + (c.kind === "cancel" ? "취소" : "정정") + " · " + c.reason});
+  }
+
+  // 근무 교대 인계서 (시행규칙 제45조: 업무를 넘길 때 인계·인수서 작성)
+  var hoDlg = document.getElementById("hoDlg");
+  function kdate(t){ var d = new Date(t); return d.getFullYear() + ". " + (d.getMonth() + 1) + ". " + d.getDate() + ".(" + "일월화수목금토"[d.getDay()] + ") " + hhmm(t); }
+  function handoverHtml(){
+    var now = Date.now(), counts = {good:0, warn:0, crit:0, off:0, chk:0};
+    units.forEach(function(u){ counts[u.status]++; });
+    var att = attentionList();
+    var openD = units.filter(function(u){ return u.dispatch; });
+    var today = records.filter(function(r){ return r.ts >= todayStart(); });
+    var cnt = {ok:0, fail:0, lost:0, wait:0, cancel:0};
+    today.forEach(function(r){ if (r.corr && r.corr.kind === "cancel") cnt.cancel++; else cnt[r.result] = (cnt[r.result] || 0) + 1; });
+    var r0 = districtRain(), sc = SIM.scenarioEnd(now);
+    var from = document.getElementById("hoFrom").value.trim(), to = document.getElementById("hoTo").value.trim(), note = document.getElementById("hoNote").value.trim();
+    function row(cells, th){ return '<tr>' + cells.map(function(c){ return th ? '<th>' + c + '</th>' : '<td>' + c + '</td>'; }).join("") + '</tr>'; }
+    return '<div class="ho-doc">' +
+      '<h2 id="hoH">근무 교대 인계서</h2><p class="ho-sub">빗물받이 모니터링 상황실 · 캡스톤디자인 시연용</p>' +
+      '<table class="ho-meta">' +
+        row(['인계 일시', esc(kdate(now)), '강수(관악구 평균)', Math.round(r0) + 'mm/h' + (SIM.realRain() ? ' · 기상청 실측 기반' : ' · 가정') + (sc ? ' · 호우 시나리오(시연) 진행 중' : '')].map(function(c, i){ return i % 2 ? c : '<b>' + c + '</b>'; })) +
+        row(['<b>인계자</b>', esc(from || "(서명란에 적음)"), '<b>인수자</b>', esc(to || "(서명란에 적음)")]) +
+      '</table>' +
+      '<h3>1. 현황</h3><table>' + row(['전체', '정상', '주의', '위험', '통신 끊김', '조치 확인 대기'], true) +
+        row([units.length, counts.good, counts.warn, counts.crit, counts.off, counts.chk].map(function(n){ return '<span class="num">' + n + '</span>'; })) + '</table>' +
+      '<h3>2. 조치가 필요한 장치 (' + att.length + '대)</h3>' +
+      (att.length ? '<table>' + row(['장치', '동', '상태', '사유', '지속', '출동'], true) +
+        att.map(function(u){ return row([u.id, esc(u.dong), LABEL[u.status], reasonOf(u) || '-', durText(u).replace("째", ""), u.dispatch ? dispatchText(u.dispatch) : '-']); }).join("") + '</table>' : '<p>없음</p>') +
+      '<h3>3. 진행 중인 출동 (' + openD.length + '건)</h3>' +
+      (openD.length ? '<table>' + row(['장치', '담당', '단계', '경과'], true) +
+        openD.map(function(u){ return row([u.id + ' ' + esc(u.dong), esc(u.dispatch.to), dispatchStage(u.dispatch), dispatchFlow(u.dispatch)]); }).join("") + '</table>' : '<p>없음</p>') +
+      '<h3>4. 오늘 조치 기록</h3><table>' + row(['전체', '정상 확인', '조치 후에도 이상', '확인 못 함', '확인 중', '취소'], true) +
+        row([today.length, cnt.ok, cnt.fail, cnt.lost, cnt.wait, cnt.cancel]) + '</table>' +
+      '<h3>5. 특이사항</h3><p>' + (note ? esc(note).replace(/\n/g, "<br>") : '없음') + '</p>' +
+      '<table class="ho-sign">' + row(['인계자 (서명)', '인수자 (서명)'], true) + row(['', '']) + '</table>' +
+      '<p class="ho-sub" style="margin-top:12px">GA-002~050은 가상 장치입니다. 실제 관악구청 문서가 아닙니다.</p>' +
+    '</div>';
+  }
+  function renderHandover(){ document.getElementById("hoDoc").innerHTML = handoverHtml(); }
+  document.getElementById("oHandover").addEventListener("click", function(){
+    var f = document.getElementById("hoFrom"); if (!f.value && SHARED && authValid()) f.value = auth.name.split("(")[0].trim();
+    renderHandover();
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch(e){} }
+    if (hoDlg.showModal) hoDlg.showModal(); else hoDlg.setAttribute("open", "");
+  });
+  ["hoFrom", "hoTo", "hoNote"].forEach(function(id){ document.getElementById(id).addEventListener("input", renderHandover); });
+  document.getElementById("hoClose").addEventListener("click", function(){ if (hoDlg.close) hoDlg.close(); else hoDlg.removeAttribute("open"); });
+  document.getElementById("hoPrint").addEventListener("click", function(){
+    renderHandover();
+    var pa = document.getElementById("printArea"); pa.innerHTML = handoverHtml();
+    if (hoDlg.close) hoDlg.close();
+    setTimeout(function(){ window.print(); pa.innerHTML = ""; }, 50);
+  });
+
   // ---------- 현장 화면 ----------
   var fTab = "need", fListHtml = "";
   function kakaoTo(u){ return "https://map.kakao.com/link/to/" + encodeURIComponent(u.id + " " + u.dong) + "," + u.ll[0] + "," + u.ll[1]; }
@@ -2183,12 +2496,16 @@
       html = need.length ? need.map(function(u){
         return '<li class="f-card ' + u.status + '">' +
           '<div class="f-top">' + badge(u.status) + '<span class="f-dur">' + durText(u) + '</span></div>' +
-          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + (u.dispatch ? '<span class="f-tag">' + (u.dispatch.startAt ? "출동 중" : "출동 요청") + '</span>' : '') + '</h2>' +
+          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + (u.dispatch ? '<span class="f-tag">' + dispatchStage(u.dispatch) + '</span>' : '') + '</h2>' +
           '<p class="f-why">' + reasonOf(u) + '</p>' +
-          (u.dispatch ? '<p class="f-meta"><b>' + esc(u.dispatch.to) + '</b> · ' + hhmm(u.dispatch.ts) + ' 요청' + (u.dispatch.startAt ? ' → ' + hhmm(u.dispatch.startAt) + ' 출발' : '') + (u.dispatch.note ? ' · ' + esc(u.dispatch.note) : '') + '</p>' : '') +
+          (u.dispatch ? '<p class="f-meta"><b>' + esc(u.dispatch.to) + '</b> · ' + dispatchFlow(u.dispatch) + (u.dispatch.note ? ' · ' + esc(u.dispatch.note) : '') + '</p>' : '') +
           '<p class="f-meta">' + (u.real ? "실증 장치" : "가상 장치") + ' · ' + esc(u.basis || "") + '</p>' +
           '<div class="f-btns"><a class="btn" href="' + kakaoTo(u) + '" target="_blank" rel="noopener">길찾기<span class="sr-only"> (카카오맵, 새 창)</span></a>' +
-          (u.dispatch && !u.dispatch.startAt
+          (u.dispatch && !u.dispatch.accAt && !u.dispatch.startAt
+            ? '<button type="button" class="btn primary" data-acc="' + u.id + '">접수</button>' +
+              '<button type="button" class="btn" data-tr="' + u.id + '">다른 담당에게 넘기기</button>' +
+              '<button type="button" class="btn secondary wide" data-rec="' + u.id + '">조치 결과 기록</button>'
+            : u.dispatch && !u.dispatch.startAt
             ? '<button type="button" class="btn primary" data-start="' + u.id + '">출발</button>' +
               '<button type="button" class="btn secondary wide" data-rec="' + u.id + '">조치 결과 기록</button>'
             : '<button type="button" class="btn primary" data-rec="' + u.id + '">조치 결과 기록</button>') + '</div></li>';
@@ -2202,22 +2519,24 @@
           (r ? '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
                '<p class="f-meta">' + hhmm(r.ts) + (r.who ? ' · ' + esc(r.who) : '') + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' +
                '<p class="f-meta">조치 전: ' + LABEL[r.beforeSt] + (r.before ? ' · ' + esc(r.before) : '') + '</p>' +
-               (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + '</p>' : '') : '') +
-          '<p class="f-meta">' + (u.real ? "실측 장치는 다음 전송(약 15~20초 간격)을 기다립니다." : "가상 장치는 약 10초 뒤 확인됩니다.") + '</p></li>';
+               (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.accAt ? ' → 접수 ' + hhmm(r.accAt) : '') + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + '</p>' : '') : '') +
+          '<p class="f-meta">' + (u.real ? "실측 장치는 다음 전송(약 15~20초 간격)을 기다립니다." : "가상 장치는 약 10초 뒤 확인됩니다.") + '</p>' +
+          (r ? '<div class="f-btns"><button type="button" class="btn" data-cor="' + esc(r.rid) + '">정정</button></div>' : '') + '</li>';
       }).join("") : '<li class="f-empty">확인을 기다리는 기록이 없어요.</li>';
     } else {
       html = done.length ? done.map(function(r){
         var u = byId[r.id];
-        var b = r.result === "ok" ? badge("good", "정상 확인") : (r.result === "fail" ? badge(r.afterSt || "warn", "조치 후에도 이상") : badge("off", "확인 못 함"));
+        var b = r.corr && r.corr.kind === "cancel" ? badge("off", "기록 취소") : r.result === "ok" ? badge("good", "정상 확인") : (r.result === "fail" ? badge(r.afterSt || "warn", "조치 후에도 이상") : badge("off", "확인 못 함"));
         var again = r.result !== "ok" && u && u.status !== "good" && u.status !== "chk" && !records.some(function(x){ return x.id === r.id && x.ts > r.ts; });
         return '<li class="f-card ' + (r.result === "ok" ? "good" : (r.result === "fail" ? (r.afterSt || "warn") : "off")) + '">' +
           '<div class="f-top">' + b + '<span class="f-dur">' + hhmm(r.ts) + ' 기록 → ' + hhmm(r.doneAt) + '</span></div>' +
           '<h2 class="f-title"><span class="num">' + r.id + '</span> ' + esc(r.dong) + '</h2>' +
-          '<p class="f-why">' + r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + '</p>' +
+          '<p class="f-why">' + actsHtml(r) + '</p>' +
           (r.who || r.by || r.memo ? '<p class="f-meta">' + esc(r.who || "") + (r.by ? ' · 기록: ' + esc(r.by) : '') + (r.memo ? ' · ' + esc(r.memo) : '') + '</p>' : '<p class="f-meta">담당자 이름은 학교 계정으로 로그인하면 보여요</p>') +
-          (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + ' → 기록 ' + hhmm(r.ts) + ' → 확인 ' + hhmm(r.doneAt) + '</p>' : '') +
-          '<p class="f-meta">결과: ' + esc(r.after || "") + '</p>' +
-          (again ? '<div class="f-btns"><button type="button" class="btn primary" data-rec="' + r.id + '">다시 조치 결과 기록</button></div>' : '') + '</li>';
+          (r.reqAt ? '<p class="f-meta">' + esc(r.reqTo || "") + ' · 요청 ' + hhmm(r.reqAt) + (r.accAt ? ' → 접수 ' + hhmm(r.accAt) : '') + (r.startAt ? ' → 출발 ' + hhmm(r.startAt) : '') + ' → 기록 ' + hhmm(r.ts) + ' → 확인 ' + hhmm(r.doneAt) + '</p>' : '') +
+          '<p class="f-meta">결과: ' + esc(r.after || "") + '</p>' + corrHtml(r) +
+          '<div class="f-btns">' + (again ? '<button type="button" class="btn primary" data-rec="' + r.id + '">다시 조치 결과 기록</button>' : '') +
+          (r.corr && r.corr.kind === "cancel" ? '' : '<button type="button" class="btn" data-cor="' + esc(r.rid) + '">정정</button>') + '</div></li>';
       }).join("") : '<li class="f-empty">오늘 남긴 기록이 없어요.</li>';
     }
     if (html !== fListHtml){ fListHtml = html; document.getElementById("fList").innerHTML = html; }   // 바뀔 때만 다시 그려 누르는 중인 버튼이 사라지지 않게
@@ -2228,6 +2547,9 @@
   });
   document.getElementById("fList").addEventListener("click", function(e){
     var s = e.target.closest("[data-start]"); if (s){ startDispatch(s.getAttribute("data-start")); return; }
+    var a = e.target.closest("[data-acc]"); if (a){ acceptDispatch(a.getAttribute("data-acc")); return; }
+    var t = e.target.closest("[data-tr]"); if (t){ openTransfer(t.getAttribute("data-tr"), t); return; }
+    var c = e.target.closest("[data-cor]"); if (c){ openCorrect(c.getAttribute("data-cor"), c); return; }
     var b = e.target.closest("[data-rec]"); if (b) openRecord(b.getAttribute("data-rec"), b);
   });
 
@@ -2306,8 +2628,8 @@
     });
     var acts = actionLog.map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id] ? byId[l.id].dong : "관악구 전체", type:l.kind, why:l.text}; });
     // 현장 조치 기록: 센서로 확인된 결과만 (확인 중인 것은 상태 변화 "조치 확인 대기"로 보임)
-    var field = records.filter(function(r){ return r.result !== "wait"; }).map(function(r){
-      var what = r.acts.map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.who ? " (" + r.who + ")" : "") + (r.memo ? " · " + r.memo : "");
+    var field = records.filter(function(r){ return r.result !== "wait" && !(r.corr && r.corr.kind === "cancel"); }).map(function(r){   // 취소된 기록은 통계에서 뺌
+      var what = (r.corr && r.corr.kind === "edit" ? r.corr.acts : r.acts).map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.corr ? "(정정됨)" : "") + (r.who ? " (" + r.who + ")" : "") + (r.memo ? " · " + r.memo : "");
       if (r.result === "ok") return {t:r.doneAt, id:r.id, dong:r.dong, type:"clean", why:"현장 조치 · 센서로 정상 확인 · " + what, resp: r.since ? r.doneAt - r.since : null};
       return {t:r.doneAt, id:r.id, dong:r.dong, type:r.result, why:what + " → " + (r.after || "")};
     });
@@ -2623,6 +2945,7 @@
     if (view === "history") renderHistory();
     if (view === "field") renderField();
     document.getElementById("clock").textContent = fmtTime(new Date());
+    renderSources();
   }
 
   function select(id, focusDetail){
@@ -2722,12 +3045,14 @@
     if (act === "notify"){ sendNotify(u.id, b); return; }
   });
   // 알림 메일: 필요할 때만 눌러서 보냄. 받는 주소는 서버(Code.gs)에만 있고, 횟수 제한이 있음
+  function dispatchPlain(d){ return d.startAt ? d.to + " 출동 중(" + hhmm(d.startAt) + " 출발)" : (d.accAt ? d.to + " 접수됨(" + hhmm(d.accAt) + ")" : d.to + "에 출동 요청됨(" + hhmm(d.ts) + ", 접수 전)"); }
   function sendNotify(id, btn){
     if (needLogin(function(){ sendNotify(id, btn); })) return;
     var u = byId[id]; if (!u) return;
     btn.disabled = true; btn.textContent = "보내는 중…";
     fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action:"notify", token:auth.token, id:u.id, dong:u.dong, status:alertSt(u), reason:sensorReason(u) || reasonOf(u), ts:Date.now()})})
+      body:JSON.stringify({action:"notify", token:auth.token, id:u.id, dong:u.dong, status:alertSt(u), reason:sensorReason(u) || reasonOf(u),
+        since:u.since, basis:u.basis || "", src:u.real ? "실측 장치(ThingSpeak)" : "가상 장치(시뮬레이션)", dispatch:u.dispatch ? dispatchPlain(u.dispatch) : "", to:u.dispatch ? u.dispatch.to : "", ts:Date.now()})})
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (res && !res.ok && res.auth){ authFailed(res.error); return; }
