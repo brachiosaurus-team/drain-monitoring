@@ -410,9 +410,12 @@
   .ho-doc h2{text-align:center;font-size:1.5rem;margin:0 0 4px}
   .ho-doc .ho-sub{text-align:center;color:var(--text-2);font-size:.875rem;margin:0 0 16px}
   .ho-doc h3{font-size:1.0625rem;margin:18px 0 8px}
-  .ho-doc table{width:100%;border-collapse:collapse;font-size:.9375rem}
+  .ho-doc table{width:100%;min-width:0;border-collapse:collapse;font-size:.9375rem;table-layout:fixed}
   .ho-doc th,.ho-doc td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
-  .ho-doc th{background:var(--surface-2);font-weight:700;white-space:nowrap}
+  .ho-doc th{background:var(--surface-2);font-weight:700}
+  .ho-doc th,.ho-doc td{word-break:keep-all;overflow-wrap:anywhere;white-space:normal}
+  .ho-doc thead th{position:static}
+  .ho-doc .ho-meta th{width:16%}
   .ho-doc td.num{text-align:right}
   .ho-doc .ho-meta{border-top:2px solid var(--text);border-bottom:1px solid var(--text)}
   .ho-doc .ho-sign td{height:52px}
@@ -422,10 +425,18 @@
   #printArea{display:none}
   @media print{
     body > *:not(#printArea){display:none!important}
-    #printArea{display:block!important;color:#000;background:#fff;font-size:11pt}
-    #printArea .ho-doc th,#printArea .ho-doc td{border-color:#666}
-    #printArea .ho-doc th{background:#eee}
-    @page{size:A4;margin:16mm}
+    :root{color-scheme:light}
+    html,body{min-width:0!important;width:auto!important;background:#fff!important}
+    #printArea{display:block!important;color:#000;background:#fff;font-size:10pt;width:100%}
+    #printArea .ho-doc{overflow:visible}
+    #printArea, #printArea *{color:#000!important}
+    #printArea .ho-doc table{font-size:9.5pt}
+    #printArea .ho-doc th,#printArea .ho-doc td{border-color:#666;padding:4px 6px}
+    #printArea .ho-doc th{background:#eee;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    #printArea .ho-doc h3{break-after:avoid;page-break-after:avoid;margin:14px 0 6px}
+    #printArea .ho-doc tr,#printArea .ho-sign{break-inside:avoid;page-break-inside:avoid}
+    #printArea .ho-doc thead{display:table-header-group}
+    @page{size:A4;margin:14mm 12mm}
   }
   .rec-dlg form{display:flex;flex-direction:column;gap:16px;padding:24px}
   .rec-dlg h2{margin:0;font-size:1.375rem}
@@ -664,18 +675,19 @@
     <div class="page-head">
       <h1>이력 · 최근 30일</h1>
       <p class="meta">기록과 분석</p>
+      <ul class="srcs" id="histSrc" aria-label="이력 자료 출처"></ul>
     </div>
     <p class="infobox">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--info-icon)"/><path d="M10 9v5" stroke="var(--info-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="6" r="1.2" fill="var(--info-bg)"/></svg>
-      <span>지난 29일은 <b>예시 기록(시뮬레이션)</b>이고, 오늘 칸은 이 화면에서 실제로 일어난 변화입니다. 와이파이 연동 후에는 GA-001의 실측 기록이 쌓입니다.</span>
+      <span>가상 장치 49대의 이력은 <b>모니터링 화면과 같은 시뮬레이션</b>을 지난 30일 동안 다시 계산한 것입니다. 비는 기상청 실측 시간 강수량(없는 날은 장마철 가정), 수납함은 2주 1회 정기 청소(가정)와 실제 남긴 조치 기록을 반영하므로 어느 화면에서 열어도 같습니다. GA-001은 실측값만 남깁니다.</span>
     </p>
     <ul class="tiles" id="hTiles" aria-label="30일 요약"></ul>
 
     <section class="card" aria-labelledby="hChartH">
-      <div class="card-head"><h2 id="hChartH">일별 주의·위험 발생</h2><span class="sub">비 온 날에 몰리는지 보세요</span></div>
+      <div class="card-head"><h2 id="hChartH">일별 주의·위험 발생</h2><span class="sub">비 온 날에 몰리는지 보세요 · 막대에 마우스를 올리면 그날 강수량</span></div>
       <div class="chart" id="hChart"></div>
       <ul class="legend">
-        <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2" fill="var(--rain)" stroke="var(--border)"/></svg>강우일 (예시)</li>
+        <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2" fill="var(--rain)" stroke="var(--border)"/><rect x="5" y="1" width="4" height="5" fill="var(--info-icon)" opacity=".55"/></svg>비 온 날(1mm 이상) · 막대는 강수량</li>
         <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="var(--warn-icon)"/></svg>주의</li>
         <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="var(--crit-icon)"/></svg>위험</li>
       </ul>
@@ -1142,7 +1154,9 @@
     }
     var BASE = [0, 2, 4.5, 7];
     // 기상청 실측 시간별 강수량 {시간 끝 시각(ms): mm}. 서버가 모든 화면에 같은 표를 나눠 줌. 없으면 장마철 가정 날씨
-    var realRain = null, realRainJson = "";
+    var realRain = null, realRainJson = "", realStart = Infinity, ver = 0;
+    // 실측 표가 있는 시각부터만 실측 비(표 첫 시간보다 이전은 장마철 가정 날씨)
+    function useReal(t){ return !!realRain && Math.ceil(t / SIM_HOUR) * SIM_HOUR >= realStart; }
     function realHour(t){
       var end = Math.ceil(t / SIM_HOUR) * SIM_HOUR;
       var v = realRain[end];
@@ -1175,7 +1189,7 @@
                     p:(30 + 40 * hsh(sc.t / 1000 | 0, m, 307)) * 4 * ta * (1 - ta)});
         }
       }
-      for (var j = j0 - 3; j <= j0 && !realRain; j++){                  // 실측 비를 쓸 때는 가상 비구름 없음
+      for (var j = j0 - 3; j <= j0 && !useReal(t); j++){                // 실측 비를 쓸 때는 가상 비구름 없음
         var start = j * CELL_SLOT + hsh(j, 2, 101) * CELL_SLOT;
         if (scenarioOn(start, mods)) continue;                        // 시나리오 중에는 위의 비구름만
         var rg = regime(Math.floor(start / BLOCK), mods);
@@ -1194,7 +1208,7 @@
     }
     function rainAt(i, t, cells, mods){
       var p = P[i], r;
-      if (realRain && !scenarioOn(t, mods)){
+      if (useReal(t) && !scenarioOn(t, mods)){
         // 실측 1시간 강수량 × 동네별 차이(2km 칸마다 20분 단위로 0.7~1.3배, 평균 1배)
         r = realHour(t) * (0.7 + 0.6 * smooth(200 + Math.floor(p.x / 2) * 7 + Math.floor(p.y / 2), t, 1200000));
       } else r = baseRain(t, mods);
@@ -1324,6 +1338,14 @@
       if (ev.kind === "preset") return true;
       return (ev.kind === "acts" || ev.kind === "boxfull") && ev.i === i;
     }
+    // 상태가 바뀐 까닭(이력에 남김)
+    function stWhy(tier, s, prev){
+      if (tier === 2) return "마지노선 수위 · 입구 차단";
+      if (s.f1 || s.f2) return (s.f1 && s.f2 ? "수납함 1·2" : (s.f1 ? "수납함1" : "수납함2")) + " 가득 참";
+      if (tier === 1) return "강우 감지 · 수위 상승";
+      if (s.b1 >= 80 || s.b2 >= 80) return "수납함" + (s.b1 >= s.b2 ? 1 : 2) + " " + Math.round(Math.max(s.b1, s.b2)) + "%";
+      return prev === "crit" || prev === "warn" ? "비 그침 · 정상 복귀" : "정상 복귀";
+    }
     function judge(i, s){
       if (s.tier === 2) return {result:"fail", st:"crit", why:"마지노선 수위 · 입구 차단"};
       if (s.f1 || s.f2) return {result:"fail", st:"crit", why:(s.f1 && s.f2 ? "수납함 1·2" : (s.f1 ? "수납함1" : "수납함2")) + " 가득 참"};
@@ -1343,9 +1365,9 @@
         if (s.cleanK === k){ s.GA = 0; s.GB = 0; emptyBoxes(i, s, k); S.log.push({k:k, i:i, kind:"clean"}); }
         stepUnit(i, s, k, mods, cells, false);
         var st = baseSt(s);
-        if (st !== s.st){ S.log.push({k:k, i:i, from:s.st, to:st}); s.st = st; s.stK = k; }
+        if (st !== s.st){ S.log.push({k:k, i:i, from:s.st, to:st, w:stWhy(s.tier, s, s.st), r:st === "crit" && s.tier === 2 ? s.rise : null}); s.st = st; s.stK = k; }
       }
-      if (S.log.length > 300) S.log.splice(0, S.log.length - 300);
+      if (S.log.length > 400) S.log.splice(0, S.log.length - 400);
       for (var pIdx = S.pending.length - 1; pIdx >= 0; pIdx--){
         var pd = S.pending[pIdx];
         if (k >= pd.due){ var j = judge(pd.i, S.u[pd.i]); j.k = k; S.results[pd.rid] = j; S.pending.splice(pIdx, 1); }
@@ -1374,21 +1396,127 @@
         // 이 시간 안의 조치·시연 이벤트(정기 청소 뒤의 것만)
         while (evIdx < events.length && events[evIdx].k * SIM_STEP_MS < hEnd){
           var ev = events[evIdx++], et = ev.k * SIM_STEP_MS;
-          for (var i5 = 1; i5 < N; i5++) if (et >= start[i5] && touches(ev, i5)) applyTo(ev, i5, state[i5], ev.k);
+          for (var i5 = 1; i5 < N; i5++) if (et >= start[i5] && touches(ev, i5)) coarseApply(ev, i5, state[i5]);
         }
-        var hourNo = Math.floor(h / SIM_HOUR);
         for (var i6 = 1; i6 < N; i6++){
           if (h < start[i6]) continue;
-          var s = state[i6], frac = (hEnd - h) / SIM_HOUR;
-          var dg = (DEBRIS_DRY_G_H + DEBRIS_RAIN_G_MM * rs[i6]) * P[i6].df * frac;
-          s.GA += dg / 2; s.GB += dg / 2;
-          if (rs[i6] >= 2 || (hourNo + i6) % 3 === 0) wipe(s);      // 비 오는 시간엔 매시간, 평소엔 3시간마다 치운 것으로
+          var s = state[i6];
+          coarseHour(i6, s, h, hEnd, rs[i6]);
           var nst = baseSt(s); if (nst !== s.st){ s.st = nst; s.stT = hEnd; }   // 가득 참·80% 넘은 시각(지속 시간 표시용)
         }
       }
       for (var i7 = 0; i7 < N; i7++) res.push(state[i7]);
       return res;
     }
+    // 1시간 단위 계산에서의 조치·시연: 수위는 따로 계산하므로 마지노선 차단 표시는 남기지 않음
+    function coarseApply(ev, i, s){ applyTo(ev, i, s, ev.k); s.over = false; s.tier = 0; updateBlocks(s); }
+    // 1시간 단위 쓰레기·수납함 한 시간 진행(coarse와 이력이 같은 규칙을 씀)
+    function coarseHour(i, s, h, hEnd, rAvg){
+      var dg = (DEBRIS_DRY_G_H + DEBRIS_RAIN_G_MM * rAvg) * P[i].df * ((hEnd - h) / SIM_HOUR);
+      s.GA += dg / 2; s.GB += dg / 2;
+      if (rAvg >= 2 || (Math.floor(h / SIM_HOUR) + i) % 3 === 0) wipe(s);   // 비 오는 시간엔 매시간, 평소엔 3시간마다 치운 것으로
+    }
+
+    // ---------- 이력: 지난 30일을 다시 계산 (모든 화면 같은 결과) ----------
+    //  수납함·입구 쓰레기는 위 1시간 단위 계산과 같은 규칙(그래서 지금 화면의 수납함 값과 이어짐),
+    //  수위는 5분마다 비를 재서 계산(하수관 6분 지연, 수위 상승 45초·하강 150초 → 5분 칸에서는 거의 평형).
+    //  마지노선에 닿은 때는 그 장치만 4초 단위로 다시 계산해 A→B 상승 시간을 구한다.
+    var H_N = 12, H_DT = SIM_HOUR / H_N;
+    var LAG_RL = 1 - Math.pow(89 / 90, 75), RISE_L = 1 - Math.pow(41 / 45, 75), FALL_L = 1 - Math.pow(146 / 150, 75);
+    function fineCrit(i, tc, s, y){
+      var f = freshUnit(i, 0), k1 = Math.floor(tc / SIM_STEP_MS), k0 = k1 - 1200;
+      f.GA = s.GA; f.GB = s.GB; f.b1 = s.b1; f.b2 = s.b2; f.f1 = s.f1; f.f2 = s.f2; updateBlocks(f);
+      for (var k = k0; k <= k1 + 225; k++){
+        var m = modsAt(k * SIM_STEP_MS);
+        if (k === k0) f.Rl = rainAt(i, k * SIM_STEP_MS, cellsAt(k * SIM_STEP_MS, m), m);
+        stepUnit(i, f, k, m, cellsAt(k * SIM_STEP_MS, m), true);
+        if (f.tier === 2) return {t:k * SIM_STEP_MS, rise:f.t1K != null && f.t1K > k0 + 30 ? f.rise : null};
+      }
+      return null;
+    }
+    function history(fromT, toT, nowT){
+      var recs = [], rain = {};
+      var t0 = fromT, start = [], state = [], hy = [], cur = [];
+      for (var i = 0; i < N; i++){
+        var lc = lastCleanAt(i, fromT); if (i > 0 && lc < t0) t0 = lc;
+        start.push(lc); state.push(freshUnit(i, Math.floor(lc / SIM_STEP_MS)));
+        hy.push({Rl:0, L:0, tier:0, over:false}); cur.push("good");
+      }
+      function stOf(y, s){ return y.tier === 2 || s.f1 || s.f2 ? "crit" : (y.tier === 1 || s.b1 >= 80 || s.b2 >= 80 ? "warn" : "good"); }
+      function mark(i, t, nst, extra){
+        var prev = cur[i]; cur[i] = nst;
+        if (t < fromT) return;
+        var r = {t:t, i:i, type:nst === "good" ? "recover" : nst, why:extra && extra.why || stWhy(hy[i].tier, state[i], prev)};
+        if (extra && extra.rise) r.rise = extra.rise;
+        recs.push(r);
+      }
+      var evIdx = 0, rs = [], rr = [];
+      for (var h = t0; h < nowT; h += SIM_HOUR){
+        var hEnd = h + SIM_HOUR, full = h < toT, dayKey = kstDay(h);
+        for (var i1 = 0; i1 < N; i1++) rs[i1] = 0;
+        if (full){
+          // 정기 청소(새벽 4시): 수납함·입구를 비우고 새로 시작
+          for (var i2 = 1; i2 < N; i2++){
+            if (h > start[i2] && lastCleanAt(i2, h) === h){
+              start[i2] = h; state[i2] = freshUnit(i2, Math.floor(h / SIM_STEP_MS));
+              if (h >= fromT) recs.push({t:h, i:i2, type:"clean", why:"정기 청소(2주 1회 새벽, 가정)"});
+              var ns = stOf(hy[i2], state[i2]); if (ns !== cur[i2]) mark(i2, h, ns, ns === "good" ? {why:"정기 청소로 정상"} : null);
+            }
+          }
+          while (evIdx < events.length && events[evIdx].k * SIM_STEP_MS < hEnd){
+            var ev = events[evIdx++], et = ev.k * SIM_STEP_MS;
+            for (var i3 = 1; i3 < N; i3++) if (et >= start[i3] && touches(ev, i3)){
+              coarseApply(ev, i3, state[i3]);
+              if (ev.kind === "reset" || ev.kind === "preset"){ hy[i3].L = 0; hy[i3].Rl = 0; hy[i3].tier = 0; hy[i3].over = false; }
+              var ns2 = stOf(hy[i3], state[i3]); if (ns2 !== cur[i3]) mark(i3, Math.max(et, fromT - 1), ns2);
+            }
+          }
+        }
+        for (var m = 0; m < H_N; m++){
+          var tm = h + (m + 0.5) * H_DT, q4 = m % 3 === 1;
+          if (q4) tm = h + ((m - 1) / 3 + 0.5) * (SIM_HOUR / 4);              // 1시간 단위 계산과 같은 시각
+          else if (!full) continue;
+          var mods = modsAt(tm), cells = cellsAt(tm, mods);
+          for (var i4 = 1; i4 < N; i4++){
+            var R = rainAt(i4, tm, cells, mods);
+            if (q4) rs[i4] += R / 4;
+            if (!full || h < start[i4]) continue;
+            var s = state[i4], y = hy[i4], p = P[i4];
+            y.Rl += (R - y.Rl) * LAG_RL;
+            var Ss = 13 * clampS((y.Rl * p.vul - 15) / 35, 0, 1.15);
+            var G = s.GA + s.GB, open = (((y.over || s.f1) ? 0 : 1) + ((y.over || s.f2) ? 0 : 1)) / 2 * (1 - G / (G + 250));
+            var Hl = 4 * clampS((R * p.vul * open / p.qcap - 0.6) / 0.6, 0, 1.5);
+            var Lt = Ss + Hl * (1 - Ss / 13); if (Lt > 13) Lt = 13;
+            y.L += (Lt - y.L) * (Lt > y.L ? RISE_L : FALL_L);
+            var pt = y.tier;
+            if (!y.over){
+              if (y.L >= LV_OVER_ON){ y.over = true; y.tier = 2; }
+              else y.tier = y.L >= LV_TIER1_ON ? 1 : (y.L < LV_TIER1_OFF ? 0 : (pt === 2 ? 1 : pt));
+            } else if (y.L < LV_OVER_OFF){ y.over = false; y.tier = y.L >= LV_TIER1_ON ? 1 : 0; }
+            var ns3 = stOf(y, s);
+            if (ns3 !== cur[i4]){
+              if (ns3 === "crit" && y.tier === 2 && pt !== 2 && tm >= fromT){
+                var fc = fineCrit(i4, tm, s, y);
+                mark(i4, fc ? Math.min(fc.t, tm) : tm, ns3, fc && fc.rise ? {rise:fc.rise} : null);
+              } else mark(i4, tm, ns3);
+            }
+          }
+        }
+        // 그 시간 강수량(관악구 평균): 실측 표가 있으면 기상청 값 그대로, 없으면 가정 날씨의 장치 평균
+        var dr = rain[dayKey] || (rain[dayKey] = {mm:0, real:0, syn:0});
+        if (useReal(hEnd - 1)){ if (realRain[hEnd] != null){ dr.mm += +realRain[hEnd]; dr.real++; } }   // 아직 발표 전인 시간은 빼고 셈
+        else { var sum = 0; for (var i5 = 1; i5 < N; i5++) sum += rs[i5]; dr.mm += sum / (N - 1); dr.syn++; }
+        if (!full) continue;
+        for (var i6 = 1; i6 < N; i6++){
+          if (h < start[i6]) continue;
+          coarseHour(i6, state[i6], h, hEnd, rs[i6]);
+          var ns4 = stOf(hy[i6], state[i6]); if (ns4 !== cur[i6]) mark(i6, hEnd, ns4);
+        }
+      }
+      recs.sort(function(a, b){ return a.t - b.t || a.i - b.i; });
+      return {recs:recs, rain:rain};
+    }
+
     // 구간 시작: 30분 전부터 수위만 계산한 뒤, 수납함·입구는 1시간 단위 계산 결과로
     function startPeriod(anchor){
       var anchorT = anchor * SIM_STEP_MS;
@@ -1424,6 +1552,7 @@
         events.push(ev); added = true; if (ev.k < minK) minK = ev.k;
       });
       if (!added) return false;
+      ver++;
       events.sort(function(a, b){ return a.k - b.k || (a.key < b.key ? -1 : 1); });
       if (S.u.length && minK <= S.k){
         var kNow = S.k, best = null;
@@ -1457,7 +1586,7 @@
       if (!old) return false;
       if (acts){ if (JSON.stringify(old.acts) === JSON.stringify(acts)) return false; old.acts = acts.slice(); }
       else events = events.filter(function(e){ return e.key !== key; });
-      delete S.results[old.rid];
+      delete S.results[old.rid]; ver++;
       rewindFrom(old.k);
       return true;
     }
@@ -1465,7 +1594,8 @@
     function setRain(table){
       var j = table ? JSON.stringify(table) : "";
       if (j === realRainJson) return false;
-      realRainJson = j; realRain = table && Object.keys(table).length ? table : null;
+      realRainJson = j; realRain = table && Object.keys(table).length ? table : null; ver++;
+      realStart = realRain ? Object.keys(realRain).reduce(function(m, x){ return Math.min(m, +x); }, Infinity) : Infinity;
       if (S.u.length){ var kNow = S.k; startPeriod(S.anchor); for (var k = S.k + 1; k <= kNow; k++) stepAll(k); }
       return true;
     }
@@ -1477,7 +1607,8 @@
       params:function(i){ return P[i]; }, hasEvent:function(key){ return events.some(function(e){ return e.key === key; }); },
       lastClean:function(i, t){ return lastCleanAt(i, t); }, nextClean:nextClean,
       scenarioEnd:function(t){ var m = modsAt(t); for (var n = 0; n < m.scen.length; n++) if (t >= m.scen[n].t && t < m.scen[n].end) return m.scen[n].end; return 0; },
-      paused:function(t){ return modsAt(t).pause < 1; }
+      paused:function(t){ return modsAt(t).pause < 1; },
+      history:history, version:function(){ return ver; }, useReal:useReal
     };
   }
 
@@ -1692,6 +1823,16 @@
     if (SHARED) items.push(srv.lastOk ? '<span class="dot ' + (srv.ok === false ? 'bad' : 'on') + '"></span><b>현장 기록</b> 공유 서버 · ' + fmtTime(new Date(srv.lastOk)) + ' 확인'
                                       : '<span class="dot"></span><b>현장 기록</b> 공유 서버 연결 중');
     items.push('<span class="dot"></span><b>가상 장치 49대</b> 시뮬레이션 · 4초마다');
+    el.innerHTML = items.map(function(h){ return '<li>' + h + '</li>'; }).join("");
+  }
+  function renderHistSource(realDays){
+    var el = document.getElementById("histSrc"); if (!el) return;
+    var items = [];
+    items.push(realDays
+      ? '<span class="dot on"></span><b>강수량</b> 기상청 실측 ' + realDays + '일' + (realDays < 30 ? ' · 나머지 ' + (30 - realDays) + '일은 장마철 가정' : '') + (rainInfo.latest ? ' · ' + mdhm(rainInfo.latest) + '까지' : '')
+      : '<span class="dot"></span><b>강수량</b> ' + (SHARED ? '기상청 연결 전 · 장마철 가정' : '장마철 가정(시뮬레이션)'));
+    items.push('<span class="dot"></span><b>가상 장치 49대</b> 같은 시뮬레이션으로 30일 다시 계산');
+    if (SHARED) items.push('<span class="dot ' + (srv.lastOk ? (srv.ok === false ? 'bad' : 'on') : '') + '"></span><b>현장 기록</b> 공유 서버' + (srv.lastOk ? ' · ' + fmtTime(new Date(srv.lastOk)) + ' 확인' : ' 연결 중'));
     el.innerHTML = items.map(function(h){ return '<li>' + h + '</li>'; }).join("");
   }
   function rainTag(){ return SIM.realRain() ? "(기상청 실측 기반)" : "(시뮬레이션)"; }
@@ -2036,6 +2177,13 @@
       })
       .catch(function(){ srv.sending = false; srv.ok = false; if (view === "field") renderField(); });   // 통신 실패 → 다음 확인 때 다시
   }
+  function dispLogText(type, d, seq){
+    if (type === "dispatch") return "현장 출동 요청 → " + d.to + (d.note ? " · " + d.note : "");
+    if (type === "accept") return "출동 요청 접수 (" + d.to + ")" + (seq ? " · 접수-" + seq : "");
+    if (type === "transfer") return "출동 요청 이송 " + d.from + " → " + d.to + (d.reason ? " · " + d.reason : "");
+    if (type === "start") return "현장 출발";
+    return "";
+  }
   function todayStart(){ var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
   function findRecord(rid){ for (var i = records.length - 1; i >= 0; i--) if (records[i].rid === rid) return records[i]; return null; }
   function applyEvent(ev){
@@ -2045,8 +2193,8 @@
       // 이 기기가 보낸 접수는 서버 번호가 돌아올 때 접수번호를 채움
       if (ev.type === "accept" && ev.seq){ var ua = byId[ev.id]; if (ua && ua.dispatch && ua.dispatch.accAt === d.ts && !ua.dispatch.accNo){ ua.dispatch.accNo = "접수-" + ev.seq; return true; } }
       // 로그인 전(공개 읽기)에 받은 기록은 이름·메모가 빠져 있음 → 로그인 뒤 같은 기록을 받으면 채움
-      if (ev.type === "record" && d.rid){ var old = findRecord(d.rid); if (old && !old.who && d.who){ old.who = d.who; old.memo = d.memo || ""; old.by = ev.by || ""; saveRecords(); return true; } }
-      if (ev.type === "correct" && d.rid && d.reason){ var oc = findRecord(d.rid); if (oc && oc.corr && !oc.corr.reason){ oc.corr.reason = d.reason; oc.corr.by = ev.by || ""; saveRecords(); return true; } }
+      if (ev.type === "record" && d.rid){ var old = findRecord(d.rid) || pastRec[d.rid]; if (old && !old.who && d.who){ old.who = d.who; old.memo = d.memo || ""; old.by = ev.by || ""; saveRecords(); return true; } }
+      if (ev.type === "correct" && d.rid && d.reason){ var oc = findRecord(d.rid) || pastRec[d.rid]; if (oc && oc.corr && !oc.corr.reason){ oc.corr.reason = d.reason; oc.corr.by = ev.by || ""; saveRecords(); return true; } }
       return false;
     }
     srv.seen[ev.eid] = true;
@@ -2056,7 +2204,12 @@
       return true;
     }
     var u = byId[ev.id]; if (!u) return false;
-    if ((ev.type === "dispatch" || ev.type === "start" || ev.type === "result") && (d.ts || d.doneAt || ev.ts) < todayStart()) return false;
+    // 오늘 이전 출동 요청·접수·이송·출발·확인 결과: 지금 상태에는 쓰지 않고 이력 화면에만
+    if (ev.type !== "record" && ev.type !== "correct" && (d.ts || d.doneAt || ev.ts) < todayStart()){
+      if (ev.type === "result"){ var pr = pastRec[d.rid]; if (pr){ pr.result = d.result; pr.after = d.after; pr.doneAt = d.doneAt; } }
+      else { var txt = dispLogText(ev.type, d, ev.seq); if (txt) pastLog.push({id:u.id, ts:d.ts || ev.ts, kind:"dispatch", text:txt}); }
+      return true;
+    }
     if (ev.type === "dispatch"){
       u.dispatch = {ts:d.ts, to:d.to, note:d.note || "", startAt:null};
       actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출동 요청 → " + d.to + (d.note ? " · " + d.note : "")});
@@ -2072,7 +2225,10 @@
       if (u.dispatch && !u.dispatch.startAt) u.dispatch.startAt = d.ts;
       actionLog.push({id:u.id, time:fmtTime(new Date(d.ts)), ts:d.ts, kind:"dispatch", text:"현장 출발" + (u.dispatch ? " (" + u.dispatch.to + ")" : "")});
     } else if (ev.type === "record"){
-      if (d.ts < todayStart()){ simActs({id:ev.id, ts:d.ts, rid:d.rid, acts:d.acts || []}); return true; }   // 지난 기록은 시뮬레이션(수납함 상태)에만 반영
+      if (d.ts < todayStart()){                // 지난 기록: 시뮬레이션(수납함 상태)과 이력 화면에만 반영
+        if (!pastRec[d.rid]) pastRec[d.rid] = {rid:d.rid, id:u.id, dong:u.dong, ts:d.ts, acts:d.acts || [], who:d.who || "", memo:d.memo || "", result:null};
+        simActs(pastRec[d.rid]); return true;
+      }
       if (findRecord(d.rid)) return true;
       var r = {}; for (var k in d) r[k] = d[k];
       r.id = u.id; r.dong = u.dong; r.result = "wait"; r.by = ev.by || "";
@@ -2109,8 +2265,8 @@
     if (!SHARED || (document.visibilityState === "hidden" && !arguments.length)) return;
     // 로그인 전: 공개 읽기(장치 상태에 필요한 것만, 이름·메모 없음) / 로그인 후: 이름·메모까지
     var pub = !authValid();
-    // 가상 장치 수납함은 마지막 정기 청소(최대 2주 전)부터 계산하므로 15일 전 0시부터의 조치·시연 기록을 받음
-    var from = todayStart() - 15 * 86400000;
+    // 가상 장치 수납함은 마지막 정기 청소(최대 2주 전)부터, 이력은 30일을 다시 계산하므로 30일 전 0시부터의 기록을 받음
+    var from = todayStart() - 30 * 86400000;
     var body = pub ? {action:"pub", since:srv.seq, from:from} : {action:"list", token:auth.token, since:srv.seq, from:from};
     fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body)})
       .then(function(r){ return r.json(); })
@@ -2394,7 +2550,7 @@
     render();
   });
   function applyCorrection(u, rid, c){
-    var r = findRecord(rid);
+    var r = findRecord(rid) || pastRec[rid];
     if (r){
       r.corr = c;
       if (u && u.verify && u.verify.rid === rid && c.kind === "cancel"){ u.verify = null; setStatus(u, statusOf(u), c.ts); }
@@ -2417,35 +2573,51 @@
   // 근무 교대 인계서 (시행규칙 제45조: 업무를 넘길 때 인계·인수서 작성)
   var hoDlg = document.getElementById("hoDlg");
   function kdate(t){ var d = new Date(t); return d.getFullYear() + ". " + (d.getMonth() + 1) + ". " + d.getDate() + ".(" + "일월화수목금토"[d.getDay()] + ") " + hhmm(t); }
+  function hoDate(t){ var d = new Date(t); return (d.getMonth() + 1) + ". " + d.getDate() + ". " + hhmm(t); }
   function handoverHtml(){
     var now = Date.now(), counts = {good:0, warn:0, crit:0, off:0, chk:0};
     units.forEach(function(u){ counts[u.status]++; });
     var att = attentionList();
     var openD = units.filter(function(u){ return u.dispatch; });
-    var today = records.filter(function(r){ return r.ts >= todayStart(); });
+    var today = records.filter(function(r){ return r.ts >= todayStart(); }).sort(function(a, b){ return a.ts - b.ts; });
     var cnt = {ok:0, fail:0, lost:0, wait:0, cancel:0};
     today.forEach(function(r){ if (r.corr && r.corr.kind === "cancel") cnt.cancel++; else cnt[r.result] = (cnt[r.result] || 0) + 1; });
     var r0 = districtRain(), sc = SIM.scenarioEnd(now);
     var from = document.getElementById("hoFrom").value.trim(), to = document.getElementById("hoTo").value.trim(), note = document.getElementById("hoNote").value.trim();
-    function row(cells, th){ return '<tr>' + cells.map(function(c){ return th ? '<th>' + c + '</th>' : '<td>' + c + '</td>'; }).join("") + '</tr>'; }
+    function cells(list, th){ return '<tr>' + list.map(function(c){ return th ? '<th>' + c + '</th>' : '<td>' + c + '</td>'; }).join("") + '</tr>'; }
+    // 열 너비(%)를 정해 A4 폭 안에 들어가게, 머리줄은 다음 쪽에도 반복
+    function table(widths, head, rows){
+      return '<table><colgroup>' + widths.map(function(w){ return '<col style="width:' + w + '%">'; }).join("") + '</colgroup>' +
+        '<thead>' + cells(head, true) + '</thead><tbody>' + rows.join("") + '</tbody></table>';
+    }
+    var RES = {ok:"정상 확인", fail:"조치 후에도 이상", lost:"확인 못 함", wait:"센서 확인 중"};
     return '<div class="ho-doc">' +
       '<h2 id="hoH">근무 교대 인계서</h2><p class="ho-sub">빗물받이 모니터링 상황실 · 캡스톤디자인 시연용</p>' +
-      '<table class="ho-meta">' +
-        row(['인계 일시', esc(kdate(now)), '강수(관악구 평균)', Math.round(r0) + 'mm/h' + (SIM.realRain() ? ' · 기상청 실측 기반' : ' · 가정') + (sc ? ' · 호우 시나리오(시연) 진행 중' : '')].map(function(c, i){ return i % 2 ? c : '<b>' + c + '</b>'; })) +
-        row(['<b>인계자</b>', esc(from || "(서명란에 적음)"), '<b>인수자</b>', esc(to || "(서명란에 적음)")]) +
+      '<table class="ho-meta"><colgroup><col style="width:16%"><col style="width:34%"><col style="width:16%"><col style="width:34%"></colgroup>' +
+        cells(['<b>인계 일시</b>', esc(kdate(now)), '<b>강수</b>', '관악구 평균 시간당 ' + Math.round(r0) + 'mm' + (SIM.realRain() ? '(기상청 실측 기반)' : '(가정)') + (sc ? ' · 호우 시나리오(시연) 진행 중' : '')]) +
+        cells(['<b>인계자</b>', esc(from || "(서명란에 적음)"), '<b>인수자</b>', esc(to || "(서명란에 적음)")]) +
       '</table>' +
-      '<h3>1. 현황</h3><table>' + row(['전체', '정상', '주의', '위험', '통신 끊김', '조치 확인 대기'], true) +
-        row([units.length, counts.good, counts.warn, counts.crit, counts.off, counts.chk].map(function(n){ return '<span class="num">' + n + '</span>'; })) + '</table>' +
+      '<h3>1. 현황 (' + hhmm(now) + ' 기준)</h3>' +
+        table([16, 16, 16, 16, 16, 20], ['전체', '정상', '주의', '위험', '통신 끊김', '조치 확인 대기'],
+          [cells([units.length, counts.good, counts.warn, counts.crit, counts.off, counts.chk].map(function(n){ return '<span class="num">' + n + '</span>'; }))]) +
       '<h3>2. 조치가 필요한 장치 (' + att.length + '대)</h3>' +
-      (att.length ? '<table>' + row(['장치', '동', '상태', '사유', '지속', '출동'], true) +
-        att.map(function(u){ return row([u.id, esc(u.dong), LABEL[u.status], reasonOf(u) || '-', durText(u).replace("째", ""), u.dispatch ? dispatchText(u.dispatch) : '-']); }).join("") + '</table>' : '<p>없음</p>') +
+      (att.length ? table([10, 11, 9, 26, 18, 26], ['장치', '동', '상태', '사유', '시작(지속)', '출동'],
+        att.map(function(u){ return cells([u.id, esc(u.dong), LABEL[u.status], esc(reasonOf(u) || '-'), hoDate(u.since) + '<br>(' + durText(u).replace("째", "") + ')', u.dispatch ? dispatchStage(u.dispatch) + ' · ' + esc(u.dispatch.to) : '-']); })) : '<p>없음</p>') +
       '<h3>3. 진행 중인 출동 (' + openD.length + '건)</h3>' +
-      (openD.length ? '<table>' + row(['장치', '담당', '단계', '경과'], true) +
-        openD.map(function(u){ return row([u.id + ' ' + esc(u.dong), esc(u.dispatch.to), dispatchStage(u.dispatch), dispatchFlow(u.dispatch)]); }).join("") + '</table>' : '<p>없음</p>') +
-      '<h3>4. 오늘 조치 기록</h3><table>' + row(['전체', '정상 확인', '조치 후에도 이상', '확인 못 함', '확인 중', '취소'], true) +
-        row([today.length, cnt.ok, cnt.fail, cnt.lost, cnt.wait, cnt.cancel]) + '</table>' +
+      (openD.length ? table([18, 22, 12, 48], ['장치', '담당', '단계', '경과'],
+        openD.map(function(u){ return cells([u.id + ' ' + esc(u.dong), esc(u.dispatch.to), dispatchStage(u.dispatch), dispatchFlow(u.dispatch)]); })) : '<p>없음</p>') +
+      '<h3>4. 오늘 조치 기록 (' + today.length + '건)</h3>' +
+        table([16, 16, 18, 16, 16, 18], ['전체', '정상 확인', '조치 후에도 이상', '확인 못 함', '확인 중', '취소'],
+          [cells([today.length, cnt.ok, cnt.fail, cnt.lost, cnt.wait, cnt.cancel])]) +
+      (today.length ? '<div style="height:8px"></div>' + table([9, 15, 25, 17, 16, 18], ['기록', '장치', '한 일', '기록자', '결과', '정정'],
+        today.map(function(r){
+          var cancel = r.corr && r.corr.kind === "cancel";
+          return cells([hhmm(r.ts), r.id + ' ' + esc(r.dong), actsHtml(r), esc(r.who || '-'), cancel ? '취소됨' : (RES[r.result] || '-') + (r.result === "fail" && r.after ? '<br>' + esc(r.after) : ''),
+                        r.corr ? hhmm(r.corr.ts) + ' ' + (cancel ? '취소' : '정정') + (r.corr.reason ? '<br>' + esc(r.corr.reason) : '') : '-']);
+        })) : '') +
       '<h3>5. 특이사항</h3><p>' + (note ? esc(note).replace(/\n/g, "<br>") : '없음') + '</p>' +
-      '<table class="ho-sign">' + row(['인계자 (서명)', '인수자 (서명)'], true) + row(['', '']) + '</table>' +
+      '<table class="ho-sign"><colgroup><col style="width:50%"><col style="width:50%"></colgroup>' + cells(['인계자 (서명)', '인수자 (서명)'], true) + cells(['', '']) +
+        cells(['인계 시각: ' + hhmm(now), '인수 시각:']) + '</table>' +
       '<p class="ho-sub" style="margin-top:12px">GA-002~050은 가상 장치입니다. 실제 관악구청 문서가 아닙니다.</p>' +
     '</div>';
   }
@@ -2462,7 +2634,10 @@
     renderHandover();
     var pa = document.getElementById("printArea"); pa.innerHTML = handoverHtml();
     if (hoDlg.close) hoDlg.close();
-    setTimeout(function(){ window.print(); pa.innerHTML = ""; }, 50);
+    // PDF로 저장할 때 파일 이름이 「근무교대인계서_20261124_1630」이 되도록 잠시 문서 제목을 바꿈
+    var t0 = document.title, d = new Date();
+    document.title = "근무교대인계서_" + d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + "_" + hhmm(d.getTime()).replace(":", "");
+    setTimeout(function(){ window.print(); pa.innerHTML = ""; document.title = t0; }, 50);
   });
 
   // ---------- 현장 화면 ----------
@@ -2579,42 +2754,19 @@
   function refitOpsList(){ fitOpsList(Number((document.getElementById("oListMeta").textContent || "0").replace(/\D/g, "")) || 0); }
 
   // ---------- 이력 ----------
+  // 지난 30일: 시뮬레이션 엔진이 같은 비(기상청 실측 또는 가정 날씨)·같은 정기 청소·같은 조치 기록으로 다시 계산 → 모든 화면에서 같은 이력
+  // 지금 6시간 구간: 4초 단위 시뮬레이션의 상태 변화 그대로. GA-001(실측 장치)은 이 화면이 받은 실측값의 변화
   var DAY = 86400000;
-  var day0 = new Date(); day0.setHours(0, 0, 0, 0);
-  var T0 = day0.getTime();
-  var hr = rng(424242);
-  var RAIN = {3:0.5, 4:0.9, 9:0.3, 15:0.7, 16:1.0, 17:0.6, 22:0.4, 26:0.8};
-  var TODAY_RAIN = 0.8;
-  var HOT = {7:1, 31:1, 12:1, 40:1, 23:1};
-  var history = [];
-  (function buildHistory(){
-    units.forEach(function(u, i){ u.prop = HOT[i] ? 0.35 + hr() * 0.2 : 0.03 + hr() * 0.07; });
-    for (var d = 0; d < 29; d++){
-      var start = T0 - (29 - d) * DAY, inten = RAIN[d] || 0;
-      units.forEach(function(u){
-        if (inten > 0 && hr() < 0.2 + 0.5 * inten){
-          var tw = start + (6 + hr() * 14) * 3600000;
-          history.push({t:tw, id:u.id, dong:u.dong, type:"warn", why:"강우 감지 · 수위 상승"});
-          if (hr() < u.prop * (0.6 + inten)){
-            var tc = tw + (5 + hr() * 40) * 60000;
-            history.push({t:tc, id:u.id, dong:u.dong, type:"crit", why:"마지노선 수위 · 입구 차단", rise:Math.round(25 + (1 - inten) * 80 + hr() * 25)});
-            var resp = (15 + hr() * 150) * 60000;
-            history.push({t:tc + resp, id:u.id, dong:u.dong, type:"clean", why:"현장 출동 · 청소 완료", resp:resp});
-          } else {
-            history.push({t:tw + (1 + hr() * 4) * 3600000, id:u.id, dong:u.dong, type:"recover", why:"비 그침 · 정상 복귀"});
-          }
-        } else if (inten === 0 && hr() < u.prop * 0.12){
-          var tf = start + (9 + hr() * 9) * 3600000;
-          history.push({t:tf, id:u.id, dong:u.dong, type:"crit", why:"수납함" + (hr() < 0.5 ? 1 : 2) + " 가득 참"});
-          var resp2 = (30 + hr() * 240) * 60000;
-          history.push({t:tf + resp2, id:u.id, dong:u.dong, type:"clean", why:"수납함 비움", resp:resp2});
-        } else if (hr() < 0.012){
-          history.push({t:start + (10 + hr() * 6) * 3600000, id:u.id, dong:u.dong, type:"clean", why:"정기 청소"});
-        }
-      });
-    }
-    history = history.filter(function(r){ return r.t < T0; });
-  })();
+  function kstToday(){ return Math.floor((Date.now() + SIM_KST_MS) / DAY) * DAY - SIM_KST_MS; }
+  var histCache = {key:"", data:null};
+  function simHistory(){
+    var T0 = kstToday(), anchorT = SIM.anchor() * SIM_STEP_MS, nowH = Math.ceil(Date.now() / SIM_HOUR) * SIM_HOUR;
+    var key = [T0, anchorT, nowH, SIM.version()].join("|");
+    if (histCache.key !== key) histCache = {key:key, data:SIM.history(T0 - 29 * DAY, anchorT, nowH)};
+    return histCache.data;
+  }
+  var pastRec = {};       // 오늘 이전 현장 조치 기록(서버에서 받은 것, 이력 화면용)
+  var pastLog = [];       // 오늘 이전 출동 요청·접수·이송·출발
 
   var KIND = {crit:"위험", warn:"주의", clean:"조치 완료", recover:"정상 복귀", dispatch:"출동 요청", off:"통신 끊김",
               chk:"조치 확인 대기", fail:"조치 후 이상", lost:"확인 못 함", demo:"시연 조작"};
@@ -2623,17 +2775,55 @@
   var hFilter = {kind:"all", id:""};
 
   function allRecords(){
-    var today = events.filter(function(e){ return e.t >= T0; }).map(function(e){
+    var T0 = kstToday(), from = T0 - 29 * DAY, H = simHistory(), anchorT = SIM.anchor() * SIM_STEP_MS;
+    var sim = H.recs.map(function(r){ var u = units[r.i]; return {t:r.t, id:u.id, dong:u.dong, type:r.type, why:r.why, rise:r.rise}; });
+    SIM.log().forEach(function(l){
+      var t = l.k * SIM_STEP_MS, u = units[l.i]; if (t < anchorT) return;
+      if (l.kind === "clean") sim.push({t:t, id:u.id, dong:u.dong, type:"clean", why:"정기 청소(2주 1회 새벽, 가정)"});
+      else sim.push({t:t, id:u.id, dong:u.dong, type:l.to === "good" ? "recover" : l.to, why:l.w || "", rise:l.r || null});
+    });
+    var real = events.filter(function(e){ return e.id === REAL_UNIT_ID && e.t >= T0 && e.to !== "chk"; }).map(function(e){
       return {t:e.t, id:e.id, dong:e.dong, type: e.to === "good" ? "recover" : e.to, why:e.why};
     });
-    var acts = actionLog.map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id] ? byId[l.id].dong : "관악구 전체", type:l.kind, why:l.text}; });
-    // 현장 조치 기록: 센서로 확인된 결과만 (확인 중인 것은 상태 변화 "조치 확인 대기"로 보임)
-    var field = records.filter(function(r){ return r.result !== "wait" && !(r.corr && r.corr.kind === "cancel"); }).map(function(r){   // 취소된 기록은 통계에서 뺌
-      var what = (r.corr && r.corr.kind === "edit" ? r.corr.acts : r.acts).map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.corr ? "(정정됨)" : "") + (r.who ? " (" + r.who + ")" : "") + (r.memo ? " · " + r.memo : "");
+    var acts = actionLog.concat(pastLog).map(function(l){ return {t:l.ts, id:l.id, dong:byId[l.id] ? byId[l.id].dong : "관악구 전체", type:l.kind, why:l.text}; });
+    function actsText(r){ return (r.corr && r.corr.kind === "edit" ? r.corr.acts : r.acts).map(function(a){ return ACT_LABEL[a]; }).join(", ") + (r.corr ? "(정정됨)" : "") + (r.who ? " (" + r.who + ")" : "") + (r.memo ? " · " + r.memo : ""); }
+    // 현장 조치 기록: 센서로 확인된 결과만 (확인 중인 것은 상태 변화 "조치 확인 대기"로 보임). 취소된 기록은 통계에서 뺌
+    var field = records.filter(function(r){ return r.result !== "wait" && !(r.corr && r.corr.kind === "cancel"); }).map(function(r){
+      var what = actsText(r);
       if (r.result === "ok") return {t:r.doneAt, id:r.id, dong:r.dong, type:"clean", why:"현장 조치 · 센서로 정상 확인 · " + what, resp: r.since ? r.doneAt - r.since : null};
       return {t:r.doneAt, id:r.id, dong:r.dong, type:r.result, why:what + " → " + (r.after || "")};
     });
-    return history.concat(today, acts, field).sort(function(a,b){ return b.t - a.t; });
+    Object.keys(pastRec).forEach(function(k){
+      var r = pastRec[k]; if (r.corr && r.corr.kind === "cancel") return;
+      var what = actsText(r);
+      if (r.result === "ok") field.push({t:r.doneAt || r.ts, id:r.id, dong:r.dong, type:"clean", why:"현장 조치 · 센서로 정상 확인 · " + what});
+      else if (r.result === "fail" || r.result === "lost") field.push({t:r.doneAt || r.ts, id:r.id, dong:r.dong, type:r.result, why:what + " → " + (r.after || "")});
+      else field.push({t:r.ts, id:r.id, dong:r.dong, type:"clean", why:"현장 조치 기록 · " + what});
+    });
+    var all = sim.concat(real, acts, field).filter(function(r){ return r.t >= from; }).sort(function(a,b){ return a.t - b.t; });
+    // 「발생」으로 셀 것만 표시: 위험→주의로 내려온 것(down), 30분 안에 다시 같은 단계로 오른 것(rep)은 기록에는 남기고 건수에서는 뺌
+    var cur = {}, left = {};
+    all.forEach(function(r){
+      if (r.type !== "warn" && r.type !== "crit" && r.type !== "recover" && r.type !== "off") return;
+      var c = cur[r.id] || "good", lf = left[r.id] || (left[r.id] = {warn:-Infinity, crit:-Infinity});
+      if (r.type === "warn"){
+        if (c === "crit"){ r.down = true; lf.crit = r.t; }
+        else if (c === "warn" || r.t - lf.warn < 30 * 60000) r.rep = true;
+      } else if (r.type === "crit"){
+        if (c === "crit" || r.t - lf.crit < 30 * 60000) r.rep = true;
+      } else if (r.type === "recover"){
+        if (c === "crit") lf.crit = r.t;
+        if (c === "crit" || c === "warn") lf.warn = r.t;
+      }
+      cur[r.id] = r.type === "recover" ? "good" : r.type;
+    });
+    return all.reverse();
+  }
+  function counted(r){ return !r.down && !r.rep; }
+  // 하루 강수량(관악구 평균 mm)과 출처
+  function dayRain(start){
+    var d = simHistory().rain[Math.floor((start + SIM_KST_MS) / DAY)];
+    return d ? {mm:d.mm, real:d.real > 0 && !d.syn} : {mm:0, real:false};
   }
   function fmtDur(ms){ var m = Math.round(ms / 60000); return m < 60 ? m + "분" : Math.floor(m / 60) + "시간 " + (m % 60) + "분"; }
   function md(t){ var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate(); }
@@ -2647,28 +2837,38 @@
   function renderHistory(){
     var recs = allRecords();
     var n = {warn:0, crit:0, clean:0}, respSum = 0, respN = 0;
-    recs.forEach(function(r){ if (n[r.type] != null) n[r.type]++; if (r.resp){ respSum += r.resp; respN++; } });
+    recs.forEach(function(r){ if (n[r.type] != null && counted(r)) n[r.type]++; if (r.resp){ respSum += r.resp; respN++; } });
     document.getElementById("hTiles").innerHTML =
       '<li class="tile"><span class="l">' + icon("crit", 16) + '위험 발생</span><span class="v num">' + n.crit + '</span><span class="s">30일 합계</span></li>' +
       '<li class="tile"><span class="l">' + icon("warn", 16) + '주의 발생</span><span class="v num">' + n.warn + '</span><span class="s">30일 합계</span></li>' +
       '<li class="tile"><span class="l">조치 완료</span><span class="v num">' + n.clean + '</span><span class="s">현장 조치 확인 + 정기 청소</span></li>' +
       '<li class="tile"><span class="l">평균 대응 시간</span><span class="v num" style="font-size:2rem">' + (respN ? fmtDur(respSum / respN) : "-") + '</span><span class="s">이상 발생 → 조치 확인</span></li>';
 
-    var days = [];
-    for (var d = 0; d < 30; d++) days.push({warn:0, crit:0, rain: d < 29 ? (RAIN[d] || 0) : TODAY_RAIN, start: T0 - (29 - d) * DAY});
+    var T0 = kstToday(), days = [], realDays = 0;
+    for (var d = 0; d < 30; d++){
+      var st0 = T0 - (29 - d) * DAY, dr = dayRain(st0);
+      if (dr.real) realDays++;
+      days.push({warn:0, crit:0, rain:dr.mm, real:dr.real, start:st0});
+    }
+    renderHistSource(realDays);
     recs.forEach(function(r){
-      var di = r.t >= T0 ? 29 : 29 - Math.ceil((T0 - r.t) / DAY);
-      if (di < 0 || di > 29) return;
+      var di = 29 - Math.floor((T0 + DAY - 1 - r.t) / DAY);
+      if (di < 0 || di > 29 || !counted(r)) return;
       if (r.type === "warn") days[di].warn++;
       else if (r.type === "crit") days[di].crit++;
     });
     var W = 760, H = 240, L = 34, Rm = 8, Tp = 12, Bm = 30, pw = W - L - Rm, ph = H - Tp - Bm, band = pw / 30, bw = band * 0.62;
-    var max = 1; days.forEach(function(x){ max = Math.max(max, x.warn + x.crit); });
+    var max = 1, rmax = 10; days.forEach(function(x){ max = Math.max(max, x.warn + x.crit); rmax = Math.max(rmax, x.rain); });
     var stepV = max > 40 ? 10 : (max > 20 ? 5 : (max > 8 ? 2 : 1));
     var topV = Math.ceil(max / stepV) * stepV;
     function yv(v){ return Tp + ph - v / topV * ph; }
     var s = "";
-    days.forEach(function(x, i){ if (x.rain > 0) s += '<rect x="' + (L + i * band) + '" y="' + Tp + '" width="' + band + '" height="' + ph + '" fill="var(--rain)"/>'; });
+    // 비 온 날(하루 1mm 이상) 바탕색 + 위쪽에 강수량 막대(가장 많은 날 기준)
+    days.forEach(function(x, i){
+      if (x.rain < 1) return;
+      s += '<rect x="' + (L + i * band) + '" y="' + Tp + '" width="' + band + '" height="' + ph + '" fill="var(--rain)"/>' +
+           '<rect x="' + (L + i * band + band * 0.3) + '" y="' + Tp + '" width="' + (band * 0.4) + '" height="' + Math.max(2, x.rain / rmax * ph * 0.35) + '" rx="1" fill="var(--info-icon)" opacity=".55"/>';
+    });
     for (var v = 0; v <= topV; v += stepV){
       s += '<line x1="' + L + '" x2="' + (W - Rm) + '" y1="' + yv(v) + '" y2="' + yv(v) + '" stroke="var(--line)"/>' +
            '<text x="' + (L - 6) + '" y="' + (yv(v) + 3.5) + '" text-anchor="end" font-size="10" fill="var(--text-2)" font-family="Noto Sans KR, sans-serif">' + v + '</text>';
@@ -2676,7 +2876,7 @@
     days.forEach(function(x, i){
       var bx = L + i * band + (band - bw) / 2, base = yv(0);
       var yc = yv(x.crit), yw = yv(x.crit + x.warn);
-      s += '<g><title>' + md(x.start) + (i === 29 ? " (오늘)" : "") + ' · 주의 ' + x.warn + ' · 위험 ' + x.crit + (x.rain > 0 ? " · 강우" : "") + '</title>';
+      s += '<g><title>' + md(x.start) + (i === 29 ? " (오늘)" : "") + ' · 주의 ' + x.warn + ' · 위험 ' + x.crit + ' · 비 ' + (x.rain < 0.1 ? "0" : x.rain.toFixed(1)) + 'mm(' + (x.real ? "기상청" : "가정") + ')</title>';
       if (x.warn) s += '<rect x="' + bx + '" y="' + yw + '" width="' + bw + '" height="' + (yc - yw) + '" fill="var(--warn-icon)"/>';
       if (x.crit) s += '<rect x="' + bx + '" y="' + yc + '" width="' + bw + '" height="' + (base - yc) + '" fill="var(--crit-icon)"/>';
       s += '<rect x="' + (L + i * band) + '" y="' + Tp + '" width="' + band + '" height="' + ph + '" fill="transparent"/></g>';
@@ -2685,11 +2885,12 @@
       }
     });
     s += '<line x1="' + L + '" x2="' + (W - Rm) + '" y1="' + yv(0) + '" y2="' + yv(0) + '" stroke="var(--border)"/>';
-    document.getElementById("hChart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="최근 30일 일별 주의·위험 발생 건수, 비 온 날 표시">' + s + '</svg>';
+    document.getElementById("hChart").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="최근 30일 일별 주의·위험 발생 건수와 하루 강수량">' + s + '</svg>';
 
     var agg = {};
     recs.forEach(function(r){
       var a = agg[r.id] || (agg[r.id] = {id:r.id, dong:r.dong, crit:0, warn:0, clean:0, rs:0, rn:0});
+      if (!counted(r)){ if (r.rise){ a.rs += r.rise; a.rn++; } return; }
       if (r.type === "crit") a.crit++; else if (r.type === "warn") a.warn++; else if (r.type === "clean") a.clean++;
       if (r.rise){ a.rs += r.rise; a.rn++; }
     });
@@ -2711,7 +2912,7 @@
     document.getElementById("hLog").innerHTML = rows.length ? rows.slice(0, 300).map(function(r){
       var extra = r.rise ? "A→B " + r.rise + "초" : (r.resp ? "대응 " + fmtDur(r.resp) : '-');
       return '<tr><td class="num">' + mdhm(r.t) + '</td><td class="num">' + r.id + '</td><td>' + esc(r.dong) + '</td>' +
-        '<td>' + kindBadge(r.type) + '</td><td>' + esc(r.why) + '</td><td class="r">' + extra + '</td></tr>';
+        '<td>' + kindBadge(r.type) + '</td><td>' + esc(r.why) + (r.down ? '<span class="muted"> · 위험에서 내려옴</span>' : (r.rep ? '<span class="muted"> · 30분 안 재발(건수 제외)</span>' : '')) + '</td><td class="r">' + extra + '</td></tr>';
     }).join("") : '<tr><td colspan="6" class="muted" style="text-align:center">조건에 맞는 기록이 없습니다. 조건 초기화를 눌러 주세요.</td></tr>';
   }
 
