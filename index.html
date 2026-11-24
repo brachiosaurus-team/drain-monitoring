@@ -798,6 +798,7 @@
     <strong>빗물받이 모니터링</strong>
     <p>졸업 캡스톤디자인 개념증명 데모입니다. 실제 관악구청 서비스가 아니며, GA-001을 뺀 장치 49대와 지난 기록은 가상 데이터입니다.</p>
     <p>데이터: GA-001 실측값(ThingSpeak 채널 3570123) · 디자인 기준: 디지털 정부서비스 UI/UX 가이드라인(2025.08)</p>
+    <p>강수량 출처: 기상청 「지상(종관, ASOS) 시간자료 조회서비스」·「단기예보 조회서비스(초단기실황)」, 공공데이터포털(data.go.kr) · 이용허락범위: 저작자표시</p>
     <p><a href="privacy.html">개인정보 처리 안내</a></p>
   </div>
 </footer>
@@ -1056,6 +1057,14 @@
       return false;
     }
     var BASE = [0, 2, 4.5, 7];
+    // 기상청 실측 시간별 강수량 {시간 끝 시각(ms): mm}. 서버가 모든 화면에 같은 표를 나눠 줌. 없으면 장마철 가정 날씨
+    var realRain = null, realRainJson = "";
+    function realHour(t){
+      var end = Math.ceil(t / SIM_HOUR) * SIM_HOUR;
+      var v = realRain[end];
+      if (v == null) v = realRain[end - SIM_HOUR];            // 아직 발표 전인 지금 시간 → 직전 1시간 값으로
+      return v == null ? 0 : +v;
+    }
     function baseRain(t, mods){
       if (scenarioOn(t, mods)) return 6 + 3 * smooth(5, t, 600000);
       // 3시간 칸의 가운데끼리 직선으로 이어 비가 서서히 오고 그치게
@@ -1082,7 +1091,7 @@
                     p:(30 + 40 * hsh(sc.t / 1000 | 0, m, 307)) * 4 * ta * (1 - ta)});
         }
       }
-      for (var j = j0 - 3; j <= j0; j++){
+      for (var j = j0 - 3; j <= j0 && !realRain; j++){                  // 실측 비를 쓸 때는 가상 비구름 없음
         var start = j * CELL_SLOT + hsh(j, 2, 101) * CELL_SLOT;
         if (scenarioOn(start, mods)) continue;                        // 시나리오 중에는 위의 비구름만
         var rg = regime(Math.floor(start / BLOCK), mods);
@@ -1100,7 +1109,11 @@
       return out;
     }
     function rainAt(i, t, cells, mods){
-      var p = P[i], r = baseRain(t, mods);
+      var p = P[i], r;
+      if (realRain && !scenarioOn(t, mods)){
+        // 실측 1시간 강수량 × 동네별 차이(2km 칸마다 20분 단위로 0.7~1.3배, 평균 1배)
+        r = realHour(t) * (0.7 + 0.6 * smooth(200 + Math.floor(p.x / 2) * 7 + Math.floor(p.y / 2), t, 1200000));
+      } else r = baseRain(t, mods);
       for (var c = 0; c < cells.length; c++){
         var dx = p.x - cells[c].cx, dy = p.y - cells[c].cy, q = 1 + (dx * dx + dy * dy) / (cells[c].s * cells[c].s);
         r += cells[c].p / (q * q);
@@ -1342,9 +1355,17 @@
       return true;
     }
     function addEvent(ev){ return addEvents([ev]); }
+    // 실측 강수량 표를 받으면 구간 처음부터 다시 계산(표가 바뀌었을 때만)
+    function setRain(table){
+      var j = table ? JSON.stringify(table) : "";
+      if (j === realRainJson) return false;
+      realRainJson = j; realRain = table && Object.keys(table).length ? table : null;
+      if (S.u.length){ var kNow = S.k; startPeriod(S.anchor); for (var k = S.k + 1; k <= kNow; k++) stepAll(k); }
+      return true;
+    }
     function nextClean(i, t){ return lastCleanAt(i, t + CLEAN_EVERY_DAYS * SIM_DAY); }
     return {
-      advanceTo:advanceTo, addEvent:addEvent, addEvents:addEvents,
+      advanceTo:advanceTo, addEvent:addEvent, addEvents:addEvents, setRain:setRain, realRain:function(){ return !!realRain; },
       unit:function(i){ return S.u[i]; }, k:function(){ return S.k; }, anchor:function(){ return S.anchor; },
       log:function(){ return S.log; }, result:function(rid){ return S.results[rid] || null; },
       params:function(i){ return P[i]; }, hasEvent:function(key){ return events.some(function(e){ return e.key === key; }); },
@@ -1549,13 +1570,14 @@
     var n = 0, r = 0; units.forEach(function(u){ if (!u.real){ r += u.rain || 0; n++; } });
     return n ? r / n : 0;
   }
+  function rainTag(){ return SIM.realRain() ? "(기상청 실측 기반)" : "(시뮬레이션)"; }
   function maxRainUnit(){ var m = null; units.forEach(function(u){ if (!u.real && (!m || u.rain > m.rain)) m = u; }); return m || {rain:0, dong:""}; }
   function renderCritical(counts){
     var now = Date.now(), r = districtRain(), scEnd = SIM.scenarioEnd(now), parts = [];
     if (scEnd) parts.push("호우 시나리오 진행 중(시연) · 관악구 평균 시간당 " + Math.round(r) + "mm · " + Math.max(1, Math.round((scEnd - now) / 60000)) + "분 남음");
-    else if (maxRainUnit().rain >= 30 && r < 10) parts.push("국지성 호우 · " + maxRainUnit().dong + " 주변 시간당 " + Math.round(maxRainUnit().rain) + "mm(시뮬레이션)");
-    else if (r >= 20) parts.push("강한 비 · 관악구 평균 시간당 " + Math.round(r) + "mm(시뮬레이션)");
-    else if (r >= 3) parts.push("비 · 관악구 평균 시간당 " + Math.round(r) + "mm(시뮬레이션)");
+    else if (maxRainUnit().rain >= 30 && r < 10) parts.push("국지성 호우 · " + maxRainUnit().dong + " 주변 시간당 " + Math.round(maxRainUnit().rain) + "mm" + rainTag());
+    else if (r >= 20) parts.push("강한 비 · 관악구 평균 시간당 " + Math.round(r) + "mm" + rainTag());
+    else if (r >= 3) parts.push("비 · 관악구 평균 시간당 " + Math.round(r) + "mm" + rainTag());
     if (counts.crit) parts.push("위험 장치 " + counts.crit + "대, 입구 차단 중");
     var show = parts.length > 0, cr = document.getElementById("critical");
     if (show) document.getElementById("caText").textContent = parts.join(" · ");
@@ -1641,13 +1663,14 @@
           (u.overflowBySensorA ? ' · 센서 B 설치 전이라 센서 A 맨 위를 마지노선으로 판단' : '') + '</span></div>' +
       '<div class="boxes">' + boxMeter(1, u.fill1, u.full1) + boxMeter(2, u.fill2, u.full2) + '</div>' +
       (u.real && u.everData ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + '</p>' : '') +
-      (!u.real ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + ' · 주변 비 시간당 ' + Math.round(u.rain) + 'mm' + (u.tier !== "NORMAL" ? ' · 와이퍼 5분마다 작동' : ' · 와이퍼 3시간마다 작동') +
+      (!u.real ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + ' · 주변 비 시간당 ' + Math.round(u.rain) + 'mm' + (SIM.realRain() ? '(출처: 기상청 실측 기반)' : '(장마철 가정)') + (u.tier !== "NORMAL" ? ' · 와이퍼 5분마다 작동' : ' · 와이퍼 3시간마다 작동') +
         '<br>정기 청소: 마지막 ' + mdhm(SIM.lastClean(u.idx, Date.now())) + ' · 다음 ' + mdhm(SIM.nextClean(u.idx, Date.now())) + ' (2주 1회 새벽, 가정)</p>' : '') +
       '<div class="actions">' +
         (u.dispatch ? '<p class="dsp-line">' + dispatchText(u.dispatch) + '</p>'
                     : '<button type="button" class="btn primary" data-act="dispatch"' + (u.status === "good" || u.verify ? ' disabled aria-disabled="true"' : '') + '>현장 출동 요청</button>') +
         (u.verify ? '<button type="button" class="btn secondary" disabled aria-disabled="true">센서 확인 중</button>'
                   : '<button type="button" class="btn secondary" data-act="record">조치 결과 기록</button>') +
+        (SHARED && u.status !== "good" ? '<button type="button" class="btn" data-act="notify">담당자에게 알림 메일</button>' : '') +
       '</div>' +
       '<ul class="log">' + (logs.length ? logs.map(function(l){ return '<li><time>' + l.time + '</time>' + (l.html || esc(l.text)) + '</li>'; }).join("") : '<li>아직 조치 기록이 없습니다.</li>') + '</ul>';
   }
@@ -1923,6 +1946,18 @@
     }
     return true;
   }
+  // 기상청 실측 강수량 표(서버가 10분마다 갱신, 모든 화면에 같은 표) → 가상 장치에 내리는 비
+  function pollRain(){
+    fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({action:"rain"})})
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok || !res.rain) return;
+        rainInfo.ok = true; rainInfo.updated = res.updated || 0; rainInfo.source = res.source || "";
+        if (SIM.setRain(res.rain)){ units.forEach(function(u){ if (!u.real) readSim(u); }); render(); }
+      })
+      .catch(function(){});
+  }
+  var rainInfo = {ok:false, updated:0, source:""};
   function pollServer(done){   // done(true: 성공 / false: 로그인 거절 / null: 통신 실패)
     done = done || function(){};
     if (!SHARED || (document.visibilityState === "hidden" && !arguments.length)) return;
@@ -2684,7 +2719,24 @@
     var act = b.getAttribute("data-act");
     if (act === "record"){ openRecord(u.id, b); return; }
     if (act === "dispatch"){ openDispatch(u.id, b); return; }
+    if (act === "notify"){ sendNotify(u.id, b); return; }
   });
+  // 알림 메일: 필요할 때만 눌러서 보냄. 받는 주소는 서버(Code.gs)에만 있고, 횟수 제한이 있음
+  function sendNotify(id, btn){
+    if (needLogin(function(){ sendNotify(id, btn); })) return;
+    var u = byId[id]; if (!u) return;
+    btn.disabled = true; btn.textContent = "보내는 중…";
+    fetch(SERVER_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"notify", token:auth.token, id:u.id, dong:u.dong, status:alertSt(u), reason:sensorReason(u) || reasonOf(u), ts:Date.now()})})
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res && !res.ok && res.auth){ authFailed(res.error); return; }
+        toast(res && res.ok ? u.id + " 알림 메일을 보냈어요." : "알림을 보내지 못했어요: " + ((res && res.error) || "응답 오류"));
+        if (res && res.ok) actionLog.push({id:u.id, time:fmtTime(new Date()), ts:Date.now(), kind:"dispatch", text:"담당자에게 알림 메일 보냄"});
+        render();
+      })
+      .catch(function(){ toast("알림을 보내지 못했어요: 서버 연결 실패"); render(); });
+  }
 
   function setPressed(groupId, btn){
     document.querySelectorAll("#" + groupId + " button").forEach(function(x){ x.setAttribute("aria-pressed", x === btn ? "true" : "false"); });
@@ -2787,6 +2839,8 @@
   pollThingSpeak();
   setInterval(pollThingSpeak, TS_POLL_MS);
   if (SHARED){
+    pollRain();
+    setInterval(pollRain, 180000);
     pollServer();
     setInterval(pollServer, 15000);
     document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "visible") pollServer(); });
