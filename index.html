@@ -631,7 +631,7 @@
 
   /* 모니터링 머리: 화면 폭 전체 남색 띠, 그 위에 요약 카드가 걸침 */
   #pcView{padding-top:0}
-  .page-head.band{position:relative;isolation:isolate;color:var(--band-text);padding:36px 0 104px;margin-bottom:-96px}
+  .page-head.band{position:relative;z-index:auto;color:var(--band-text);padding:36px 0 104px;margin-bottom:-96px}
   .page-head.band::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:50%;width:100vw;transform:translateX(-50%);background:linear-gradient(180deg,var(--band-a),var(--band-b))}
   .page-head.band h1{color:#fff}
   .page-head.band .meta,.page-head.band .srcs,.page-head.band .srcs b{color:var(--band-sub)}
@@ -639,7 +639,8 @@
   .page-head.band .live{background:#7ee2a8}
   .page-head.band .help>summary{border-color:rgba(255,255,255,.7);color:#fff}
   .page-head.band .help>summary:hover,.page-head.band .help[open]>summary{background:#fff;border-color:#fff;color:var(--s70)}
-  .page-head.band .help-body{color:var(--text)}
+  .page-head.band .help-body{color:var(--text);z-index:60}
+  .page-head.band .help[open]{position:relative;z-index:60}
   .page-head.band .help-body .ts-err{color:var(--crit-text)}
 
   /* 요약 카드 4개: 52px 연한 아이콘, 위험만 진한 면 */
@@ -896,7 +897,7 @@
       <li class="tile total"><div class="k-head"><span class="l">전체 장치</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span></div><span class="v num" id="tTotal">0</span><span class="s" id="tTotalS">관악구 21개 동</span><span class="k-bar" id="tBar" aria-hidden="true"></span></li>
       <li class="tile crit" id="tileCrit"><div class="k-head"><span class="l">위험</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 21.2 12 12 21.2 2.8 12z"/><path d="M12 8v4.6"/><circle cx="12" cy="15.8" r=".6" fill="currentColor"/></svg></span></div><span class="v num"><span id="tCrit">0</span><span class="k-d" id="tCritD"></span></span><span class="s" id="tCritS">마지노선 수위 · 수납함 가득 참</span></li>
       <li class="tile warn" id="tileWarn"><div class="k-head"><span class="l">주의</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 21 19.5H3z"/></svg></span></div><span class="v num"><span id="tWarn">0</span><span class="k-d" id="tWarnD"></span></span><span class="s" id="tWarnS">강우 감지 · 수납함 80% 이상</span></li>
-      <li class="tile off" id="tileOff"><div class="k-head"><span class="l">통신 끊김 · 확인 대기</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.2 15.6a5.4 5.4 0 0 1 7.6 0"/><circle cx="12" cy="18.6" r=".8" fill="currentColor"/></svg></span></div><span class="v num"><span id="tOff">0</span><small class="k-sub"> · <span id="tChk">0</span></small></span><span class="s" id="tOffS">통신 끊김 · 조치 확인 대기</span></li>
+      <li class="tile off" id="tileOff"><div class="k-head"><span class="l">통신 끊김 · 확인 대기</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 5-2.7M14.6 9.9A10 10 0 0 1 19 12.5M8.2 15.6a5.4 5.4 0 0 1 3.8-1.6"/><circle cx="12" cy="18.6" r=".8" fill="currentColor"/><path d="M4 4l16 16"/></svg></span></div><span class="v num"><span id="tOff">0</span><small class="k-sub"> · <span id="tChk">0</span></small></span><span class="s" id="tOffS">통신 끊김 · 조치 확인 대기</span></li>
     </ul>
 
     <div class="body-grid">
@@ -1088,7 +1089,7 @@
         <ul class="o-counts" aria-label="장치 상태 요약">
           <li class="o-count crit" id="oCritBox"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 21.2 12 12 21.2 2.8 12z"/><path d="M12 8v4.6"/><circle cx="12" cy="15.8" r=".6" fill="currentColor"/></svg></span><span class="l">위험</span><span class="v" id="oCrit">0</span><span class="s" id="oCritS"></span></li>
           <li class="o-count warn" id="oWarnBox"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 21 19.5H3z"/></svg></span><span class="l">주의</span><span class="v" id="oWarn">0</span><span class="s" id="oWarnS"></span></li>
-          <li class="o-count off"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.2 15.6a5.4 5.4 0 0 1 7.6 0"/><circle cx="12" cy="18.6" r=".8" fill="currentColor"/></svg></span><span class="l">통신 끊김</span><span class="v" id="oOff">0</span><span class="s" id="oOffS"></span></li>
+          <li class="o-count off"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 5-2.7M14.6 9.9A10 10 0 0 1 19 12.5M8.2 15.6a5.4 5.4 0 0 1 3.8-1.6"/><circle cx="12" cy="18.6" r=".8" fill="currentColor"/><path d="M4 4l16 16"/></svg></span><span class="l">통신 끊김</span><span class="v" id="oOff">0</span><span class="s" id="oOffS"></span></li>
           <li class="o-count rain"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 8.5a3.3 3.3 0 0 1-.5 6.5z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2"/></svg></span><span class="l">관악구 강수</span><span class="v" id="oRain">0</span><span class="s" id="oRainS">mm/h</span></li>
         </ul>
         <div class="o-map" id="oMap"></div>
