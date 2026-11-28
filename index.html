@@ -582,6 +582,230 @@
   .site-footer .f-rel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
   .site-footer .f-copy{grid-column:1/-1;border-top:1px solid var(--line);padding-top:16px;font-size:.875rem;color:var(--text-3)}
   @media (max-width:767px){ .site-footer .container{grid-template-columns:minmax(0,1fr)} }
+  /* ===================== 디자인 기준 v2 (2차 개편 · 시안 C) =====================
+     KRDS 공식 토큰. 행동 = primary, 구조(띠·밑줄·아이콘 선) = secondary-70 남색,
+     진한 색 면은 한 화면에 위험 하나, 아이콘은 연한 바탕 + 색 선, 연한 분홍 바탕은 쓰지 않음 */
+  :root{
+    --s5:#eef2f7; --s10:#d6e0eb; --s50:#346fb2; --s60:#1c589c; --s70:#063a74; --s80:#052b57;
+    --primary-strong:#063a74; --band-a:#063a74; --band-b:#1c589c; --band-text:#ffffff; --band-sub:#d6e0eb;
+    --card-sh:0 2px 8px #00000014; --crit-solid:#de3412; --warn-solid:#ffb114; --warn-ink:#9e6a00;
+    --ic-bg:#eef2f7; --ic-fg:#063a74; --crit-tint:#fdefec; --warn-tint:#fff3db; --off-tint:#f4f5f6;
+  }
+  :root[data-mode="hc"]{
+    --s5:#1e2124; --primary-strong:#b1cefb; --band-a:#052561; --band-b:#063a74; --band-sub:#b1cefb;
+    --card-sh:none; --warn-ink:#ffc95c;
+    --ic-bg:#33363d; --ic-fg:#b1cefb; --crit-tint:#390d05; --warn-tint:#2e1f00; --off-tint:#33363d;
+  }
+  #main{overflow-x:clip}
+  svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  /* 헤더: 메뉴 아이콘 + 남색 밑줄, 로고 남색 */
+  .brand svg rect{fill:var(--s70)}
+  [data-mode="hc"] .brand svg rect{fill:var(--primary)}
+  .demo-tag{background:var(--s5);border-color:transparent;color:var(--s70);font-weight:700;border-radius:999px}
+  [data-mode="hc"] .demo-tag{color:var(--text)}
+  .main-menu a{display:inline-flex;align-items:center;gap:6px}
+  .main-menu a svg.i{width:18px;height:18px}
+
+  /* 긴급 공지: KRDS 「긴급 공지」 구조 — 흰 띠 안에 테두리 카드 + 진한 빨강 라벨 */
+  .critical{background:var(--surface);border-bottom:1px solid var(--line)}
+  .critical .container{display:block;padding-block:10px}
+  .ca-box{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;border:1px solid var(--border);border-radius:var(--r-md);padding:6px 14px 6px 6px;background:var(--surface);box-shadow:var(--card-sh)}
+  .ca-label{background:var(--crit-solid);color:#fff;border-radius:var(--r-sm);padding:4px 12px 4px 10px;gap:6px}
+  .ca-label svg{width:18px;height:18px}
+  .ca-link{color:var(--text-2);text-decoration:none;font-weight:600;font-size:.9375rem}
+  .ca-link::after{content:" ›"}
+  .ca-link:hover{color:var(--link);text-decoration:underline}
+
+  /* 상태 배지: 위험·주의는 진한 면 + 흰/검은 글자 */
+  .badge{border-radius:6px;font-size:.875rem;padding:1px 8px}
+  .badge.crit{background:var(--crit-solid);border-color:transparent;color:#fff}
+  .badge.crit svg rect{fill:#fff} .badge.crit svg path{stroke:var(--crit-solid)} .badge.crit svg circle{fill:var(--crit-solid)}
+  .badge.warn{background:var(--warn-solid);color:#2e1f00}
+
+  /* 카드 */
+  .card{border-color:var(--line);box-shadow:var(--card-sh)}
+  .card-head h2{display:flex;align-items:center;gap:10px}
+  .h-ic{width:36px;height:36px;border-radius:10px;background:var(--ic-bg);color:var(--ic-fg);display:inline-grid;place-items:center;flex:none}
+  .h-ic svg.i{width:20px;height:20px}
+
+  /* 모니터링 머리: 화면 폭 전체 남색 띠, 그 위에 요약 카드가 걸침 */
+  #pcView{padding-top:0}
+  .page-head.band{position:relative;isolation:isolate;color:var(--band-text);padding:36px 0 104px;margin-bottom:-96px}
+  .page-head.band::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:50%;width:100vw;transform:translateX(-50%);background:linear-gradient(180deg,var(--band-a),var(--band-b))}
+  .page-head.band h1{color:#fff}
+  .page-head.band .meta,.page-head.band .srcs,.page-head.band .srcs b{color:var(--band-sub)}
+  .page-head.band .srcs b{color:#fff}
+  .page-head.band .live{background:#7ee2a8}
+  .page-head.band .help>summary{border-color:rgba(255,255,255,.7);color:#fff}
+  .page-head.band .help>summary:hover,.page-head.band .help[open]>summary{background:#fff;border-color:#fff;color:var(--s70)}
+  .page-head.band .help-body{color:var(--text)}
+  .page-head.band .help-body .ts-err{color:var(--crit-text)}
+
+  /* 요약 카드 4개: 52px 연한 아이콘, 위험만 진한 면 */
+  .tiles.kpi{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;background:none;border:0;box-shadow:none;overflow:visible;border-radius:0}
+  .tiles.kpi .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--card-sh);padding:20px 22px;gap:6px;min-height:176px}
+  .tiles.kpi .tile:first-child{border-left:1px solid var(--line)}
+  .k-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .k-head .l{color:var(--text);font-weight:600;padding-top:12px}
+  .k-ic{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;background:var(--ic-bg);color:var(--ic-fg);flex:none}
+  .k-ic svg.i{width:26px;height:26px;stroke-width:1.9}
+  .tiles.kpi .v{font-size:2.5rem;line-height:1.1;font-weight:700;display:flex;align-items:center;gap:10px;color:var(--text)}
+  .tiles.kpi .s{font-size:.875rem;color:var(--text-2);word-break:keep-all}
+  .k-sub{font-size:1.25rem;font-weight:600;color:var(--text-3)}
+  .k-d{display:inline-flex;align-items:center;font-size:.8125rem;font-weight:700;border-radius:999px;padding:1px 9px;line-height:1.6}
+  .k-d.up{background:var(--crit-tint);color:var(--crit-text)}
+  .k-d.down{background:#eaf6ec;color:#228738}
+  .k-d.same{background:var(--off-tint);color:var(--text-2)}
+  [data-mode="hc"] .k-d.down{background:#0b2a12;color:#8fd19e}
+  .k-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--track);margin-top:auto;gap:2px}
+  .k-bar i{display:block;height:100%}
+  .k-bar i.good{background:#b1b8be} .k-bar i.warn{background:var(--warn-solid)} .k-bar i.crit{background:var(--crit-solid)} .k-bar i.off{background:#58616a} .k-bar i.chk{background:var(--info-icon)}
+  .tile.warn .k-ic{background:var(--warn-tint);color:var(--warn-ink)}
+  .tile.crit .k-ic{background:var(--crit-tint);color:var(--crit-text)}
+  .tile.off .k-ic{background:var(--off-tint);color:var(--text-2)}
+  .tiles.kpi .tile.warn.on{background:var(--surface)} .tiles.kpi .tile.warn.on .v{color:var(--text)}
+  .tiles.kpi .tile.crit.on{background:var(--crit-solid);border-color:var(--crit-solid);color:#fff;box-shadow:0 6px 18px rgba(222,52,18,.28)}
+  .tiles.kpi .tile.crit.on .l,.tiles.kpi .tile.crit.on .v,.tiles.kpi .tile.crit.on .s{color:#fff}
+  .tiles.kpi .tile.crit.on .k-ic{background:rgba(255,255,255,.2);color:#fff}
+  .tiles.kpi .tile.crit.on .k-d{background:rgba(255,255,255,.22);color:#fff}
+  @media (max-width:1023px){ .tiles.kpi{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px} .tiles.kpi .tile{min-height:0;padding:16px} }
+  @media (max-width:767px){ .tiles.kpi .tile{border-top:1px solid var(--line)} .tiles.kpi .tile:nth-child(even){border-left:1px solid var(--line)} .k-ic{width:44px;height:44px} .tiles.kpi .v{font-size:2rem} .page-head.band{padding:24px 0 96px} }
+
+  /* 본문: 지도 + (강수 카드, 조치 필요) */
+  .right-col>.card{flex:1}
+  .right-col .map.livemap{height:auto;flex:1;min-height:clamp(420px,46vw,640px)}
+  .side-col{display:flex;flex-direction:column;gap:24px;min-width:0}
+  .side-col #attention{flex:1;min-height:0}
+  .wx{position:relative;overflow:hidden;gap:6px;padding:20px 22px}
+  .wx-h{font-size:.9375rem;font-weight:600;color:var(--text-2)}
+  .wx-src{font-weight:400}
+  .wx-now{font-size:1rem;color:var(--text-2);font-weight:600}
+  .wx-now b{font-size:2.5rem;line-height:1.1;color:var(--s70);font-weight:700;margin-right:2px}
+  [data-mode="hc"] .wx-now b{color:var(--primary)}
+  .wx-grid{display:flex;gap:24px;margin:4px 0 0;flex-wrap:wrap;position:relative;z-index:1}
+  .wx-grid div{display:flex;flex-direction:column-reverse}
+  .wx-grid dt{font-size:.8125rem;color:var(--text-3)}
+  .wx-grid dd{margin:0;font-weight:700;font-size:1.0625rem}
+  .wx-art{position:absolute;right:14px;top:10px;width:104px;height:88px;color:var(--s10);pointer-events:none}
+  [data-mode="hc"] .wx-art{color:#33363d}
+  #attention .sl{max-height:clamp(300px,32vw,460px)}
+  #attention .sl-item{display:block;padding:0;border-top:1px solid var(--line);grid-template-columns:none}
+  #attention .sl-item:first-child{border-top:0}
+  .sl-btn{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 8px;border:0;background:none;text-align:left;cursor:pointer;border-radius:var(--r-sm);color:var(--text)}
+  .sl-btn:hover{background:var(--surface-2)}
+  .sl-ic{width:40px;height:40px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center}
+  [data-mode="hc"] .sl-ic{background:#33363d}
+  .sl-main{display:flex;flex-direction:column;min-width:0}
+  .sl-main .sl-title{font-weight:700}
+  .sl-main .sl-desc{font-size:.875rem;color:var(--text-2)}
+  .sl-end{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .sl-end .sl-dur{font-size:.8125rem;color:var(--text-3)}
+  #attention .sl-item.sel{box-shadow:none;padding-left:0}
+  #attention .sl-item.sel .sl-btn{background:var(--primary-soft);box-shadow:inset 3px 0 0 var(--primary)}
+  #attention .sl-item.sel .sl-title{color:var(--text)}
+
+  /* 범례: 개수가 붙은 알약 칩 */
+  .legend.chips{gap:8px}
+  .legend.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 12px 3px 10px;background:var(--surface);font-size:.875rem;gap:6px}
+  .legend.chips li b{font-weight:700;color:var(--text)}
+  .legend.chips li b:empty{display:none}
+  .legend.chips #lgFlood{color:var(--link);border-color:var(--primary-soft)}
+
+  /* ============ 상황실: 고대비 토큰 + 남색 상단 막대, 진한 면은 위험 하나 ============ */
+  .ops{grid-template-rows:auto minmax(0,1fr);gap:16px;padding-top:0}
+  .o-top{margin-inline:calc(-1 * max(24px, env(safe-area-inset-left,0px)));padding:12px 32px;background:linear-gradient(180deg,#063a74,#052b57);color:#fff;gap:16px 28px}
+  .o-title{display:flex;align-items:center;gap:14px}
+  .o-logo{width:44px;height:44px;border-radius:10px;background:#fff;color:#063a74;display:grid;place-items:center;flex:none}
+  .o-logo svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+  .o-title h1{font-size:clamp(1.375rem,1.7vw,2rem);line-height:1.25;color:#fff}
+  .o-title p{color:#d6e0eb;font-size:clamp(.875rem,.9vw,1.0625rem)}
+  .o-btns{display:flex;gap:10px;flex:1;flex-wrap:wrap}
+  .o-top .btn{background:transparent;border-color:rgba(255,255,255,.45);color:#fff;min-height:44px}
+  .o-top .btn:hover{background:rgba(255,255,255,.12)}
+  .o-right{margin-left:auto;text-align:right}
+  .o-date{color:#d6e0eb;font-size:clamp(.8125rem,.8vw,1rem)}
+  .o-clock{font-size:clamp(1.75rem,2.4vw,2.75rem);line-height:1.15;color:#fff}
+  html.is-fs .ops{grid-template-rows:auto minmax(0,1fr);padding-top:0}
+  .o-body{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+  .o-main{display:flex;flex-direction:column;gap:16px;min-height:0;min-width:0}
+  .o-main .o-map{flex:1;min-height:clamp(420px,52vh,760px)}
+  html.is-fs .o-main .o-map{min-height:0}
+  .o-counts{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:16px;flex:none}
+  .o-count{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:16px;align-items:center;padding:16px 20px;min-width:0;border-color:var(--line);background:var(--surface)}
+  .o-count .k-ic{grid-row:1/4;width:56px;height:56px}
+  .o-count .l{font-size:clamp(.9375rem,1vw,1.1875rem);color:var(--text-2)}
+  .o-count .v{font-size:clamp(2.25rem,3.2vw,3.75rem);line-height:1.05}
+  .o-count .s{font-size:clamp(.8125rem,.85vw,1rem);color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .o-count.warn .k-ic{background:var(--warn-tint);color:var(--warn-icon)} .o-count.warn.on{background:var(--surface)} .o-count.warn.on .v{color:var(--warn-icon)}
+  .o-count.crit .k-ic{background:var(--crit-tint);color:var(--crit-icon)}
+  .o-count.crit.on{background:var(--crit-solid);border-color:var(--crit-solid)}
+  .o-count.crit.on .l,.o-count.crit.on .v,.o-count.crit.on .s{color:#fff}
+  .o-count.crit.on .k-ic{background:rgba(255,255,255,.2);color:#fff}
+  .o-count.crit.on .k-d{background:rgba(255,255,255,.22);color:#fff}
+  .o-count.off .k-ic{background:var(--off-tint);color:var(--text-2)}
+  .o-count.rain .k-ic{background:var(--ic-bg);color:var(--ic-fg)}
+  .o-side{padding:0;gap:0;overflow:hidden;border-color:var(--line)}
+  .o-listbox{flex:1;min-height:0;display:flex;flex-direction:column;padding:20px 24px 8px;overflow:hidden}
+  .o-listbox .card-head,.o-events .card-head{padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .o-item{grid-template-columns:auto minmax(0,1fr) auto;padding:14px 0}
+  .o-item .who{display:flex;align-items:center;gap:10px}
+  .o-item .who .badge{font-size:clamp(.8125rem,.85vw,1rem)}
+  .o-item.crit .dur,.o-item.warn .dur{color:var(--text)}
+  .o-events{border:0;border-top:1px solid var(--line);border-radius:0;padding:16px 24px 20px;gap:4px;background:none}
+  .o-ev-list{display:flex;flex-direction:column;gap:0}
+  .o-ev{flex-direction:row;gap:20px;border-left:0;padding:10px 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .o-ev time{font-weight:700;color:var(--text);flex:none}
+  .o-ev span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2)}
+  .o-ev span b{font-weight:600;color:var(--text-2);font-size:inherit}
+  @media (max-width:1100px){ .o-body{grid-template-columns:minmax(0,1fr)} .o-counts{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+  /* ============ 현장: 남색 머리 + 걸친 요약 카드, 단계 표시, 큰 버튼, 하단 탭 막대 ============ */
+  #fieldView{padding-top:0;padding-bottom:112px;gap:16px}
+  #fieldView .page-head.band{padding:24px 0 72px;margin-bottom:-72px}
+  #fieldView .page-head.band h1{font-size:1.625rem}
+  #fieldView .page-head.band .f-meta{color:var(--band-sub)}
+  #fieldView .page-head.band .f-meta.srv.bad{color:#ffd2c8}
+  .f-sum{position:relative}
+  .f-sum li{border-color:var(--line);box-shadow:var(--card-sh)}
+  .page-head.band .btn.primary{background:#fff;border-color:#fff;color:var(--s70)}
+  .f-sum .l{color:var(--text-2);font-weight:600}
+  .f-sum .v{font-size:1.875rem;font-weight:700}
+  .f-sum li.crit.on{background:var(--crit-solid);border-color:var(--crit-solid)}
+  .f-sum li.crit.on .l,.f-sum li.crit.on .v{color:#fff}
+  .f-tabs{position:fixed;z-index:45;left:50%;transform:translateX(-50%);bottom:max(12px, env(safe-area-inset-bottom,0px));width:min(calc(40rem - 32px), calc(100vw - 32px));background:#1e2124;border:0;border-radius:999px;padding:6px;gap:4px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .f-tabs button{min-height:44px;border:0;border-radius:999px;background:transparent;color:#cdd1d5;font-weight:600}
+  .f-tabs button[aria-pressed="true"]{background:#fff;color:#1e2124;font-weight:700}
+  [data-mode="hc"] .f-tabs{background:#f4f5f6} [data-mode="hc"] .f-tabs button{color:#33363d} [data-mode="hc"] .f-tabs button[aria-pressed="true"]{background:#000;color:#fff}
+  body:has(#fieldView:not([hidden])) .site-footer{padding-bottom:96px}
+  body:has(#fieldView:not([hidden])) .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .f-card{border:1px solid var(--line);border-left:1px solid var(--line);box-shadow:var(--card-sh);border-radius:14px;padding:16px;gap:6px}
+  .f-card.crit,.f-card.warn,.f-card.off,.f-card.chk{border-left-color:var(--line)}
+  .f-top{justify-content:flex-start}
+  .f-top .f-dur{margin-left:auto;font-weight:600;color:var(--text-3);font-size:.875rem}
+  .f-tag{margin-left:0;border-radius:999px;background:var(--s5);color:var(--s70);padding:1px 10px}
+  [data-mode="hc"] .f-tag{color:var(--primary)}
+  .f-title{font-size:1.25rem;font-weight:700}
+  .f-why{font-weight:600;color:var(--text-2)}
+  .f-steps{list-style:none;display:flex;margin:8px 0 2px;padding:0;font-size:.8125rem;color:var(--text-3)}
+  .f-steps li{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+  .f-steps li::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--border);position:relative;z-index:1;box-sizing:border-box}
+  .f-steps li::after{content:"";position:absolute;top:5px;left:50%;width:100%;height:2px;background:var(--border)}
+  .f-steps li:last-child::after{display:none}
+  .f-steps li.done::before,.f-steps li.done::after{background:var(--s50)}
+  .f-steps li.now{color:var(--text);font-weight:700}
+  .f-steps li.now::before{background:var(--surface);border:3px solid var(--primary);width:14px;height:14px;margin-top:-1px}
+  .f-boxes{display:flex;gap:12px;margin-top:4px}
+  .f-boxes div{flex:1;font-size:.8125rem;color:var(--text-2)}
+  .f-boxes i{display:block;height:6px;border-radius:3px;background:var(--track);margin-top:4px;overflow:hidden}
+  .f-boxes i b{display:block;height:100%;background:var(--s50)}
+  .f-boxes i b.warn{background:var(--warn-solid)} .f-boxes i b.crit{background:var(--crit-solid)}
+  .f-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .f-btns .btn{flex:1 1 8rem;min-height:52px;border-radius:10px}
+  .f-btns .btn.f-map{flex:0 0 52px;padding:0;color:var(--text-2)}
+  .f-btns .btn.wide{flex-basis:100%}
+  .f-btns .btn:only-child{flex-basis:100%}
+  .f-empty{border:1px dashed var(--border);background:var(--surface)}
   @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
 </head>
@@ -600,10 +824,10 @@
       </a>
       <nav class="main-menu" aria-label="주 메뉴">
         <ul>
-          <li><a href="#pc" id="navPc">모니터링</a></li>
-          <li><a href="#ops" id="navOps">상황실</a></li>
-          <li><a href="#history" id="navHist">이력</a></li>
-          <li><a href="#field" id="navField">현장</a></li>
+          <li><a href="#pc" id="navPc"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>모니터링</a></li>
+          <li><a href="#ops" id="navOps"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>상황실</a></li>
+          <li><a href="#history" id="navHist"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V7M17 16v-8"/></svg>이력</a></li>
+          <li><a href="#field" id="navField"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>현장</a></li>
         </ul>
       </nav>
     </div>
@@ -641,18 +865,18 @@
   </div>
 </header>
   <section class="critical" role="banner" aria-label="긴급 공지" id="critical">
-    <div class="container">
-      <span class="ca-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 19 18H1z" fill="var(--crit-icon)"/><path d="M10 8v4.5" stroke="var(--crit-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="15" r="1.1" fill="var(--crit-bg)"/></svg>긴급</span>
+    <div class="container"><div class="ca-box">
+      <span class="ca-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8 18 17H2z" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 8v4" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><circle cx="10" cy="14.4" r="1" fill="#fff"/></svg>긴급</span>
       <p class="ca-text" id="caText" aria-live="polite"></p>
       <a class="ca-link" href="#pc" id="caLink">조치 필요 목록 보기</a>
-    </div>
+    </div></div>
   </section>
 </div>
 
 <main id="main" tabindex="-1">
   <!-- ===================== 모니터링 (담당자 PC) ===================== -->
   <div class="container view" id="pcView">
-    <div class="page-head">
+    <div class="page-head band">
       <div class="ph-row">
         <h1>관악구 빗물받이 모니터링</h1>
         <details class="help">
@@ -668,39 +892,51 @@
       <ul class="srcs" id="dataSrc" aria-label="데이터 출처와 갱신 시각"></ul>
     </div>
 
-    <ul class="tiles" aria-label="장치 상태 요약">
-      <li class="tile"><span class="l">전체 장치</span><span class="v num" id="tTotal">0</span><span class="s" id="tTotalS">관악구 21개 동</span></li>
-      <li class="tile"><span class="l"><span data-icon="good"></span>정상</span><span class="v num" id="tGood">0</span><span class="s" id="tGoodS">-</span></li>
-      <li class="tile warn" id="tileWarn"><span class="l"><span data-icon="warn"></span>주의</span><span class="v num" id="tWarn">0</span><span class="s">강우 감지 · 수납함 80% 이상</span></li>
-      <li class="tile crit" id="tileCrit"><span class="l"><span data-icon="crit"></span>위험</span><span class="v num" id="tCrit">0</span><span class="s">마지노선 수위 · 수납함 가득 참</span></li>
+    <ul class="tiles kpi" aria-label="장치 상태 요약">
+      <li class="tile total"><div class="k-head"><span class="l">전체 장치</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span></div><span class="v num" id="tTotal">0</span><span class="s" id="tTotalS">관악구 21개 동</span><span class="k-bar" id="tBar" aria-hidden="true"></span></li>
+      <li class="tile crit" id="tileCrit"><div class="k-head"><span class="l">위험</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 21.2 12 12 21.2 2.8 12z"/><path d="M12 8v4.6"/><circle cx="12" cy="15.8" r=".6" fill="currentColor"/></svg></span></div><span class="v num"><span id="tCrit">0</span><span class="k-d" id="tCritD"></span></span><span class="s" id="tCritS">마지노선 수위 · 수납함 가득 참</span></li>
+      <li class="tile warn" id="tileWarn"><div class="k-head"><span class="l">주의</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 21 19.5H3z"/></svg></span></div><span class="v num"><span id="tWarn">0</span><span class="k-d" id="tWarnD"></span></span><span class="s" id="tWarnS">강우 감지 · 수납함 80% 이상</span></li>
+      <li class="tile off" id="tileOff"><div class="k-head"><span class="l">통신 끊김 · 확인 대기</span><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.2 15.6a5.4 5.4 0 0 1 7.6 0"/><circle cx="12" cy="18.6" r=".8" fill="currentColor"/></svg></span></div><span class="v num"><span id="tOff">0</span><small class="k-sub"> · <span id="tChk">0</span></small></span><span class="s" id="tOffS">통신 끊김 · 조치 확인 대기</span></li>
     </ul>
 
     <div class="body-grid">
       <div class="right-col">
         <section class="card" aria-labelledby="hMap">
-          <div class="card-head"><h2 id="hMap">위치</h2><span class="sub" id="mapSub">침수흔적·침수예상 구역 기준 배치 · GA-001만 실제 장치</span></div>
+          <div class="card-head"><h2 id="hMap"><span class="h-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span>위치</h2><span class="sub" id="mapSub">침수흔적·침수예상 구역 기준 배치 · GA-001만 실제 장치</span></div>
           <div class="map" id="map"></div>
-          <ul class="legend">
-            <li><span data-icon="good"></span>정상</li>
-            <li><span data-icon="warn"></span>주의</li>
-            <li><span data-icon="crit"></span>위험</li>
-            <li><span data-icon="off"></span>통신 끊김</li>
-            <li><span data-icon="chk"></span>조치 확인 대기</li>
+          <ul class="legend chips">
+            <li><span data-icon="crit"></span>위험 <b class="num" id="lgCrit"></b></li>
+            <li><span data-icon="warn"></span>주의 <b class="num" id="lgWarn"></b></li>
+            <li><span data-icon="off"></span>통신 끊김 <b class="num" id="lgOff"></b></li>
+            <li><span data-icon="chk"></span>조치 확인 대기 <b class="num" id="lgChk"></b></li>
+            <li><span data-icon="good"></span>정상 <b class="num" id="lgGood"></b></li>
             <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--link)" stroke-width="2"/></svg>선택한 장치</li>
             <li id="lgFlood"><span class="sw-flood" aria-hidden="true"></span>침수 예상 구역 (진할수록 깊음)</li>
           </ul>
           <p class="map-hint" id="mapHint">지도를 한 번 누르면 마우스 휠로 확대·축소할 수 있어요.</p>
         </section>
       </div>
+      <div class="side-col">
+      <section class="card wx" aria-labelledby="hWx">
+        <h2 id="hWx" class="wx-h">관악구 평균 강수 <span class="wx-src" id="wxSrc"></span></h2>
+        <p class="wx-now"><b class="num" id="wxNow">0</b> mm/h</p>
+        <dl class="wx-grid">
+          <div><dt>오늘 누적</dt><dd class="num" id="wxDay">-</dd></div>
+          <div><dt>관측 시각</dt><dd class="num" id="wxAt">-</dd></div>
+          <div><dt>오늘 정기 청소</dt><dd class="num" id="wxClean">-</dd></div>
+        </dl>
+        <svg class="wx-art" viewBox="0 0 120 100" aria-hidden="true"><path d="M30 62a20 20 0 0 1 4-39.6A28 28 0 0 1 88 26a18 18 0 0 1 2 36z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/><path d="M40 76l-4 9M62 76l-4 9M84 76l-4 9" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>
+      </section>
       <section class="card" aria-labelledby="hAtt" id="attention" tabindex="-1">
-        <div class="card-head"><h2 id="hAtt">조치 필요</h2><span class="sub" id="attMeta">위험 먼저, 오래된 순</span></div>
+        <div class="card-head"><h2 id="hAtt"><span class="h-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg></span>조치 필요</h2><span class="sub" id="attMeta">위험 먼저, 오래된 순</span></div>
         <ul class="sl" id="attList"></ul>
       </section>
+      </div>
     </div>
     <section class="card" aria-labelledby="hDetail" id="detail" tabindex="-1"></section>
 
     <section class="card" aria-labelledby="hAll">
-      <div class="card-head"><h2 id="hAll">전체 장치</h2><span class="sub" id="tableMeta"></span></div>
+      <div class="card-head"><h2 id="hAll"><span class="h-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M9 9.5v10"/></svg></span>전체 장치</h2><span class="sub" id="tableMeta"></span></div>
       <div class="filters">
         <fieldset class="fgroup">
           <legend>상태</legend>
@@ -834,41 +1070,55 @@
   <div class="ops view" id="opsView" hidden>
     <div class="o-top">
       <div class="o-title">
-        <h1>빗물받이 상황판</h1>
-        <p>관악구 · 상황실 대형 화면</p>
+        <span class="o-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 5h10M5 10h14M7 15h10M10 20h4"/></svg></span>
+        <div><h1>빗물받이 상황판</h1>
+        <p>관악구 · 상황실 대형 화면</p></div>
       </div>
-      <ul class="o-counts" aria-label="장치 상태 요약">
-        <li class="o-count"><span class="l"><span data-icon="good"></span>정상</span><span class="v" id="oGood">0</span></li>
-        <li class="o-count warn" id="oWarnBox"><span class="l"><span data-icon="warn"></span>주의</span><span class="v" id="oWarn">0</span></li>
-        <li class="o-count crit" id="oCritBox"><span class="l"><span data-icon="crit"></span>위험</span><span class="v" id="oCrit">0</span></li>
-      </ul>
+      <div class="o-btns">
+        <button type="button" class="btn sm" id="oFull"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>전체 화면으로 보기</button>
+        <button type="button" class="btn sm" id="oHandover"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>근무 교대 인계서</button>
+      </div>
       <div class="o-right">
+        <p class="o-date" id="oDate"></p>
         <p class="o-clock" id="oClock">--:--:--</p>
-        <button type="button" class="btn sm" id="oFull">전체 화면으로 보기</button>
-        <button type="button" class="btn sm" id="oHandover">근무 교대 인계서</button>
       </div>
     </div>
     <div class="o-body">
-      <div class="o-map" id="oMap"></div>
-      <section class="o-side" aria-labelledby="oListH">
-        <div class="card-head"><h2 id="oListH">위험·주의 장치</h2><span class="sub" id="oListMeta"></span></div>
-        <ul class="o-list" id="oList"></ul>
-      </section>
+      <div class="o-main">
+        <ul class="o-counts" aria-label="장치 상태 요약">
+          <li class="o-count crit" id="oCritBox"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 21.2 12 12 21.2 2.8 12z"/><path d="M12 8v4.6"/><circle cx="12" cy="15.8" r=".6" fill="currentColor"/></svg></span><span class="l">위험</span><span class="v" id="oCrit">0</span><span class="s" id="oCritS"></span></li>
+          <li class="o-count warn" id="oWarnBox"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 21 19.5H3z"/></svg></span><span class="l">주의</span><span class="v" id="oWarn">0</span><span class="s" id="oWarnS"></span></li>
+          <li class="o-count off"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.2 15.6a5.4 5.4 0 0 1 7.6 0"/><circle cx="12" cy="18.6" r=".8" fill="currentColor"/></svg></span><span class="l">통신 끊김</span><span class="v" id="oOff">0</span><span class="s" id="oOffS"></span></li>
+          <li class="o-count rain"><span class="k-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 8.5a3.3 3.3 0 0 1-.5 6.5z"/><path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2"/></svg></span><span class="l">관악구 강수</span><span class="v" id="oRain">0</span><span class="s" id="oRainS">mm/h</span></li>
+        </ul>
+        <div class="o-map" id="oMap"></div>
+      </div>
+      <div class="o-side">
+        <section class="o-listbox" aria-labelledby="oListH">
+          <div class="card-head"><h2 id="oListH">위험·주의 장치</h2><span class="sub" id="oListMeta"></span></div>
+          <ul class="o-list" id="oList"></ul>
+        </section>
+        <section class="o-events" aria-labelledby="oEvH">
+          <div class="card-head"><h2 id="oEvH">최근 상태 변화</h2><span class="sub">오늘</span></div>
+          <ul class="o-ev-list" id="oEvents"></ul>
+        </section>
+      </div>
     </div>
-    <section class="o-events" aria-labelledby="oEvH">
-      <div class="card-head"><h2 id="oEvH">최근 상태 변화</h2><span class="sub">침수 위험 구역 기준 가상 배치 · GA-001만 실증 장치</span></div>
-      <ul class="o-ev-list" id="oEvents"></ul>
-    </section>
   </div>
 
   <!-- ===================== 현장 (현장 담당자 휴대폰) ===================== -->
   <div class="container view field" id="fieldView" hidden>
-    <div class="page-head">
+    <div class="page-head band">
       <h1>현장 조치</h1>
       <p class="meta">관악구 · 현장 담당자 화면 · <time id="fClock" class="num">--:--</time> 기준</p>
       <p class="f-meta srv" id="fServer" role="status"></p>
       <p id="fLoginP" hidden><button type="button" class="btn primary" id="fLogin">학교 계정으로 로그인</button></p>
     </div>
+    <ul class="f-sum" aria-label="지금 현황">
+      <li class="crit" id="fsCrit"><span class="l">위험</span><span class="v num" id="fsCritN">0</span></li>
+      <li id="fsWarn"><span class="l">주의</span><span class="v num" id="fsWarnN">0</span></li>
+      <li id="fsReq"><span class="l">출동 요청</span><span class="v num" id="fsReqN">0</span></li>
+    </ul>
     <div class="f-tabs" role="group" aria-label="목록 고르기" id="fTabs">
       <button type="button" data-tab="need" aria-pressed="true">조치 필요</button>
       <button type="button" data-tab="chk" aria-pressed="false">확인 대기</button>
@@ -1903,14 +2153,66 @@
       .sort(function(a,b){ return (SEV[alertSt(a)] - SEV[alertSt(b)]) || (SEV[a.status] - SEV[b.status]) || (a.since - b.since); });
   }
 
+  // 어제 같은 시각의 위험·주의 대수 (이력과 같은 기록으로 계산, 10분마다 다시)
+  var yCache = {key:"", v:null};
+  function yesterdayCounts(){
+    var key = Math.floor(Date.now() / 600000) + "|" + SIM.version();
+    if (yCache.key === key) return yCache.v;
+    var v = null;
+    try {
+      var tY = Date.now() - DAY, cur = {}, recs = allRecords();
+      for (var i = recs.length - 1; i >= 0; i--){
+        var r = recs[i]; if (r.t > tY) break;
+        if (r.type === "warn" || r.type === "crit") cur[r.id] = r.type;
+        else if (r.type === "recover" || r.type === "clean") cur[r.id] = "good";
+      }
+      v = {warn:0, crit:0};
+      Object.keys(cur).forEach(function(id){ if (v[cur[id]] != null) v[cur[id]]++; });
+    } catch(e){ v = null; }
+    yCache = {key:key, v:v};
+    return v;
+  }
+  function deltaChip(now, y){
+    if (y == null) return "";
+    var d = now - y;
+    return d === 0 ? '<span class="k-d same"><span aria-hidden="true">±0</span><span class="sr-only">어제 같은 시각과 같음</span></span>'
+      : '<span class="k-d ' + (d > 0 ? "up" : "down") + '"><span aria-hidden="true">' + (d > 0 ? "▲" : "▼") + ' </span>' + Math.abs(d) + '<span class="sr-only">대 ' + (d > 0 ? "많음" : "적음") + '(어제 같은 시각보다)</span></span>';
+  }
   function renderTiles(counts){
+    var y = yesterdayCounts(), real = units.filter(function(u){ return u.real; }).length;
+    var critU = units.filter(function(u){ return alertSt(u) === "crit"; }), warnU = units.filter(function(u){ return alertSt(u) === "warn"; });
+    var lv = critU.filter(function(u){ return u.tier === "OVERFLOW"; }).length;
+    var wr = warnU.filter(function(u){ return u.tier === "TIER1"; }).length;
     document.getElementById("tTotal").textContent = units.length;
-    document.getElementById("tGood").textContent = counts.good;
-    document.getElementById("tGoodS").textContent = "전체의 " + Math.round(counts.good / units.length * 100) + "%";
-    document.getElementById("tWarn").textContent = counts.warn;
+    document.getElementById("tTotalS").textContent = "정상 " + counts.good + " · 실측 " + real + " · 가상 " + (units.length - real);
+    var bar = [["crit", counts.crit], ["warn", counts.warn], ["off", counts.off], ["chk", counts.chk], ["good", counts.good]];
+    document.getElementById("tBar").innerHTML = bar.filter(function(b){ return b[1] > 0; }).map(function(b){ return '<i class="' + b[0] + '" style="flex:' + b[1] + '"></i>'; }).join("");
     document.getElementById("tCrit").textContent = counts.crit;
+    document.getElementById("tWarn").textContent = counts.warn;
+    document.getElementById("tCritD").innerHTML = deltaChip(counts.crit, y && y.crit);
+    document.getElementById("tWarnD").innerHTML = deltaChip(counts.warn, y && y.warn);
+    document.getElementById("tCritS").textContent = (y ? "어제 " + y.crit + " · " : "") + (counts.crit ? "마지노선 " + lv + ", 수납함 " + (critU.length - lv) : "마지노선 수위 · 수납함 가득 참");
+    document.getElementById("tWarnS").textContent = (y ? "어제 " + y.warn + " · " : "") + (counts.warn ? "강우 " + wr + ", 수납함 " + (warnU.length - wr) : "강우 감지 · 수납함 80% 이상");
+    document.getElementById("tOff").textContent = counts.off;
+    document.getElementById("tChk").textContent = counts.chk;
+    var offU = units.filter(function(u){ return u.status === "off"; });
+    document.getElementById("tOffS").textContent = offU.length ? offU.map(function(u){ return u.id + " " + sensorReason(u); }).join(", ") : "통신 끊김 " + counts.off + " · 조치 확인 대기 " + counts.chk;
     document.getElementById("tileWarn").classList.toggle("on", counts.warn > 0);
     document.getElementById("tileCrit").classList.toggle("on", counts.crit > 0);
+    document.getElementById("tileOff").classList.toggle("on", counts.off > 0);
+    ["Crit", "Warn", "Off", "Chk", "Good"].forEach(function(k){ var el = document.getElementById("lg" + k); if (el) el.textContent = counts[k.toLowerCase()]; });
+    renderWeather();
+  }
+  // 강수 카드: 관악구 평균 시간당 강수, 오늘 누적, 관측 시각, 오늘 정기 청소
+  function renderWeather(){
+    var r = districtRain(), now = Date.now(), T0 = kstToday();
+    document.getElementById("wxNow").textContent = r >= 10 ? Math.round(r) : (Math.round(r * 10) / 10);
+    document.getElementById("wxSrc").textContent = "· " + (SIM.realRain() ? "기상청 실측" : "가정");
+    var d = null; try { d = dayRain(T0); } catch(e){}
+    document.getElementById("wxDay").textContent = d ? (Math.round(d.mm * 10) / 10) + "mm" : "-";
+    document.getElementById("wxAt").textContent = SIM.realRain() && rainInfo.latest ? hhmm(rainInfo.latest) : "가정";
+    var n = 0; units.forEach(function(u){ if (!u.real && SIM.lastClean(u.idx, now) >= T0) n++; });
+    document.getElementById("wxClean").textContent = n + "대";
   }
 
   // 긴급 공지는 하나만 (p.362): 지금 비(시뮬레이션) + 위험 장치 수를 한 문장으로.
@@ -1964,11 +2266,11 @@
     document.getElementById("attMeta").textContent = att.length + "대 · 위험 먼저, 오래된 순";
     if (!att.length){ box.innerHTML = '<li class="empty">조치가 필요한 장치가 없습니다.</li>'; return; }
     box.innerHTML = att.map(function(u){
-      return '<li class="sl-item' + (u.id === selectedId ? " sel" : "") + '">' +
-        badge(u.status) +
-        '<div><p class="sl-title num">' + u.id + ' · ' + esc(u.dong) + '</p><p class="sl-desc">' + reasonOf(u) + (u.real ? ' · 실측 장치' : '') + '</p></div>' +
-        '<p class="sl-dur">' + durText(u) + '</p>' +
-        '<button type="button" class="btn sm" data-id="' + u.id + '" aria-label="' + u.id + ' 상세 보기">상세 보기</button></li>';
+      return '<li class="sl-item ' + u.status + (u.id === selectedId ? " sel" : "") + '"><button type="button" class="sl-btn" data-id="' + u.id + '"' + (u.id === selectedId ? ' aria-current="true"' : '') + '>' +
+        '<span class="sl-ic">' + icon(u.status, 18) + '</span>' +
+        '<span class="sl-main"><span class="sl-title num">' + u.id + ' ' + esc(u.dong) + (u.real ? ' · 실측' : '') + '</span><span class="sl-desc">' + reasonOf(u) + '</span></span>' +
+        '<span class="sl-end">' + badge(u.status) + '<span class="sl-dur">' + durText(u) + '</span></span>' +
+        '<span class="sr-only"> 상세 보기</span></button></li>';
     }).join("");
   }
 
@@ -2091,9 +2393,16 @@
   function mdhm(t){ var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
   function hhmm(t){ var d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
   function renderOps(counts, att){
-    document.getElementById("oGood").textContent = counts.good;
+    var y = yesterdayCounts(), rr = districtRain();
     document.getElementById("oWarn").textContent = counts.warn;
     document.getElementById("oCrit").textContent = counts.crit;
+    document.getElementById("oOff").textContent = counts.off;
+    document.getElementById("oCritS").innerHTML = y ? "어제 같은 시각 " + y.crit + " " + deltaChip(counts.crit, y.crit) : "";
+    document.getElementById("oWarnS").innerHTML = y ? "어제 " + y.warn + " " + deltaChip(counts.warn, y.warn) : "";
+    document.getElementById("oOffS").textContent = "확인 대기 " + counts.chk;
+    document.getElementById("oRain").textContent = rr >= 10 ? Math.round(rr) : Math.round(rr * 10) / 10;
+    document.getElementById("oRainS").textContent = "mm/h · " + (SIM.realRain() && rainInfo.latest ? hhmm(rainInfo.latest) + " 관측" : "가정");
+    var dd = new Date(); document.getElementById("oDate").textContent = (dd.getMonth() + 1) + ". " + dd.getDate() + ".(" + "일월화수목금토"[dd.getDay()] + ") · 4초마다 갱신";
     document.getElementById("oWarnBox").classList.toggle("on", counts.warn > 0);
     document.getElementById("oCritBox").classList.toggle("on", counts.crit > 0);
     drawMap("oMap", true, counts);
@@ -2101,19 +2410,19 @@
     var shown = att.slice(0, 6);
     document.getElementById("oListMeta").textContent = att.length ? att.length + "대" : "";
     document.getElementById("oList").innerHTML = shown.length ? shown.map(function(u){
-      return '<li class="o-item ' + u.status + '">' + icon(u.status, 28).replace('<svg', '<svg class="ic"') +
-        '<span class="who">' + u.id + ' ' + esc(u.dong) + '</span>' +
-        '<span class="why">' + LABEL[u.status] + ' · ' + reasonOf(u) + (u.dispatch ? ' · ' + dispatchStage(u.dispatch) : '') + '</span>' +
+      return '<li class="o-item ' + u.status + '">' + icon(u.status, 24).replace('<svg', '<svg class="ic"') +
+        '<span class="who">' + u.id + ' ' + esc(u.dong) + ' ' + badge(u.status) + '</span>' +
+        '<span class="why">' + reasonOf(u) + (u.real ? ' · 실측 장치' : '') + (u.dispatch ? ' · ' + dispatchStage(u.dispatch) : '') + '</span>' +
         '<span class="dur">' + durText(u).replace("째", "") + '<small>지속</small></span></li>';
     }).join("") + (att.length > 6 ? '<li class="o-more">외 ' + (att.length - 6) + '대는 모니터링 화면에서 확인</li>' : '')
       : '<li class="empty">모든 장치 정상</li>';
     fitOpsList(att.length);
 
-    var recent = events.slice(-4).reverse();
-    document.getElementById("oEvents").innerHTML = recent.map(function(e){
-      return '<li class="o-ev to-' + e.to + '"><time>' + hhmm(e.t) + '</time><b>' + e.id + ' ' + esc(e.dong) + '</b>' +
-        '<span>' + LABEL[e.from] + ' → ' + LABEL[e.to] + ' · ' + e.why + '</span></li>';
-    }).join("");
+    var recent = events.slice(-5).reverse();
+    document.getElementById("oEvents").innerHTML = recent.length ? recent.map(function(e){
+      return '<li class="o-ev to-' + e.to + '"><time>' + hhmm(e.t) + '</time><span><b>' + e.id + ' ' + esc(e.dong) + '</b> · ' +
+        LABEL[e.from] + ' → ' + LABEL[e.to] + (e.why ? ' · ' + e.why : '') + '</span></li>';
+    }).join("") : '<li class="o-ev">아직 상태 변화 없음</li>';
   }
 
   // ---------- 현장 조치 기록 ----------
@@ -2755,6 +3064,18 @@
   var fTab = "need", fListHtml = "";
   function kakaoTo(u){ return "https://map.kakao.com/link/to/" + encodeURIComponent(u.id + " " + u.dong) + "," + u.ll[0] + "," + u.ll[1]; }
   function sinceText(t){ var m = Math.floor((Date.now() - t) / 60000); return m < 1 ? "방금" : (m < 60 ? m + "분 전" : Math.floor(m / 60) + "시간 " + (m % 60) + "분 전"); }
+  // 현장 카드: 출동 단계(요청 → 접수 → 출발 → 기록)와 수납함 막대
+  function fSteps(d){
+    var st = [["요청", true], ["접수", !!d.accAt || !!d.startAt], ["출발", !!d.startAt], ["기록", false]], cur = -1;
+    st.forEach(function(x, i){ if (!x[1] && cur < 0) cur = i; });
+    return '<ol class="f-steps" aria-label="출동 단계">' + st.map(function(x, i){
+      return '<li class="' + (x[1] ? "done" : i === cur ? "now" : "") + '"' + (i === cur ? ' aria-current="step"' : '') + '>' + x[0] + '</li>';
+    }).join("") + '</ol>';
+  }
+  function fBox(n, v, full){
+    var p = Math.max(0, Math.min(100, Math.round(full ? 100 : v)));
+    return '<div><span>수납함' + n + ' <b class="num">' + p + '%</b></span><i><b class="' + (p >= 100 ? "crit" : p >= 80 ? "warn" : "") + '" style="width:' + p + '%"></b></i></div>';
+  }
   function renderField(){
     var need = units.filter(function(u){ return u.status !== "good" && u.status !== "chk"; })
       .sort(function(a, b){ return ((b.dispatch ? 1 : 0) - (a.dispatch ? 1 : 0)) || (SEV[a.status] - SEV[b.status]) || (a.since - b.since); });
@@ -2762,6 +3083,10 @@
     var done = records.filter(function(r){ return r.result !== "wait"; }).slice().reverse();
     var req = need.filter(function(u){ return u.dispatch; }).length;
     document.getElementById("fClock").textContent = hhmm(Date.now());
+    var nC = units.filter(function(u){ return alertSt(u) === "crit"; }).length, nW = units.filter(function(u){ return alertSt(u) === "warn"; }).length;
+    document.getElementById("fsCritN").textContent = nC; document.getElementById("fsCrit").classList.toggle("on", nC > 0);
+    document.getElementById("fsWarnN").textContent = nW;
+    document.getElementById("fsReqN").textContent = req;
     var tabN = {need:need.length, chk:chk.length, done:done.length};
     document.querySelectorAll("#fTabs button").forEach(function(b){
       var k = b.getAttribute("data-tab");
@@ -2781,12 +3106,13 @@
     if (fTab === "need"){
       html = need.length ? need.map(function(u){
         return '<li class="f-card ' + u.status + '">' +
-          '<div class="f-top">' + badge(u.status) + '<span class="f-dur">' + durText(u) + '</span></div>' +
-          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + (u.dispatch ? '<span class="f-tag">' + dispatchStage(u.dispatch) + '</span>' : '') + '</h2>' +
+          '<div class="f-top">' + badge(u.status) + (u.dispatch ? '<span class="f-tag">' + dispatchStage(u.dispatch) + '</span>' : '') + '<span class="f-dur">' + durText(u) + '</span></div>' +
+          '<h2 class="f-title"><span class="num">' + u.id + '</span> ' + esc(u.dong) + '</h2>' +
           '<p class="f-why">' + reasonOf(u) + '</p>' +
-          (u.dispatch ? '<p class="f-meta"><b>' + esc(u.dispatch.to) + '</b> · ' + dispatchFlow(u.dispatch) + (u.dispatch.note ? ' · ' + esc(u.dispatch.note) : '') + '</p>' : '') +
+          (u.dispatch ? fSteps(u.dispatch) + '<p class="f-meta"><b>' + esc(u.dispatch.to) + '</b> · ' + dispatchFlow(u.dispatch) + (u.dispatch.note ? ' · ' + esc(u.dispatch.note) : '') + '</p>' : '') +
+          (u.fill1 >= 50 || u.fill2 >= 50 ? '<div class="f-boxes">' + fBox(1, u.fill1, u.full1) + fBox(2, u.fill2, u.full2) + '</div>' : '') +
           '<p class="f-meta">' + (u.real ? "실증 장치" : "가상 장치") + ' · ' + esc(u.basis || "") + '</p>' +
-          '<div class="f-btns"><a class="btn" href="' + kakaoTo(u) + '" target="_blank" rel="noopener">길찾기<span class="sr-only"> (카카오맵, 새 창)</span></a>' +
+          '<div class="f-btns"><a class="btn f-map" href="' + kakaoTo(u) + '" target="_blank" rel="noopener" title="길찾기 (카카오맵, 새 창)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span class="sr-only">길찾기 (카카오맵, 새 창)</span></a>' +
           (u.dispatch && !u.dispatch.accAt && !u.dispatch.startAt
             ? '<button type="button" class="btn primary" data-acc="' + u.id + '">접수</button>' +
               '<button type="button" class="btn" data-tr="' + u.id + '">다른 담당에게 넘기기</button>' +
@@ -2853,7 +3179,7 @@
       return;
     }
     if (!more) { more = document.createElement("li"); more.className = "o-more"; ul.appendChild(more); }
-    var side = ul.closest(".o-side"), limit = side.getBoundingClientRect().bottom - 24;
+    var side = ul.closest(".o-listbox"), limit = side.getBoundingClientRect().bottom - 24;
     var hiddenN = 0;
     more.textContent = "외 0대는 모니터링 화면에서 확인";
     for (var i = items.length - 1; i > 0 && more.getBoundingClientRect().bottom > limit; i--) {
@@ -3249,7 +3575,6 @@
       if (u.status === "chk" && a !== "good") counts[a]++;   // 확인 대기 중이어도 센서 기준 위험·주의는 숫자와 긴급 공지에 그대로
     });
     var att = attentionList();
-    document.getElementById("tTotalS").textContent = "관악구 21개 동" + (counts.off ? " · 통신 끊김 " + counts.off + "대" : "") + (counts.chk ? " · 조치 확인 대기 " + counts.chk + "대" : "");
     document.getElementById("tsErr").textContent = tsInfo.ok === false ? "지금 ThingSpeak에서 값을 읽지 못하고 있습니다: " + tsInfo.error : "";
     if (!selectedId || !byId[selectedId]) selectedId = att.length ? att[0].id : REAL_UNIT_ID;
     renderCritical(counts);
