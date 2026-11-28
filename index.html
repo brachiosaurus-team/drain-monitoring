@@ -24,7 +24,10 @@
      크기: rem 단위, 본문 17px(p.107), 굵기 400/700(p.104), 줄 간격 150% 이상(p.105).
      형태: 배지 4px, 버튼·입력 6px, 카드 10px(p.130). 간격: 8의 배수(p.152). */
   :root{
-    --font:"Pretendard GOV","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font:"Pretendard GOV","Pretendard GOV Variable",Pretendard,"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+    /* 디자인 기준 v1: 둥글기(클수록 크게) · 간격 4px 단위 */
+    --r-xs:4px; --r-sm:8px; --r-md:12px; --r-lg:16px;
+    --primary-strong:#083891;
 
     --bg:#f4f5f6; --surface:#ffffff; --surface-2:#f4f5f6;
     --text:#1e2124; --text-2:#464c53; --text-3:#6d7882;
@@ -48,7 +51,7 @@
     --text:#f4f5f6; --text-2:#cdd1d5; --text-3:#b1b8be;
     --line:#33363d; --border:#58616a; --border-input:#8a949e;
     --primary:#86aff9; --primary-hover:#b1cefb; --primary-soft:#03163a; --link:#86aff9; --focus:#86aff9;
-    --btn-text:#000000;
+    --btn-text:#000000; --primary-strong:#b1cefb;
 
     --ok-text:#cdd1d5; --ok-bg:#1e2124; --ok-border:#33363d; --ok-icon:#8a949e;
     --off-text:#f4f5f6; --off-bg:#33363d; --off-icon:#b1b8be;
@@ -65,6 +68,10 @@
     --shadow:none;
     color-scheme:dark;
   }
+  /* 글꼴: Pretendard GOV(KRDS 기본 서체), 굵기별 파일 */
+  @font-face{font-family:"Pretendard GOV";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/PretendardGOV-Regular.subset.woff2) format("woff2")}
+  @font-face{font-family:"Pretendard GOV";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/PretendardGOV-SemiBold.subset.woff2) format("woff2")}
+  @font-face{font-family:"Pretendard GOV";font-weight:700;font-style:normal;font-display:swap;src:url(fonts/PretendardGOV-Bold.subset.woff2) format("woff2")}
   *{box-sizing:border-box}
   [hidden]{display:none!important}
   html{font-size:100%}
@@ -499,6 +506,83 @@
     .o-ev-list{grid-template-columns:minmax(0,1fr)}
     .card{padding:16px}
   }
+
+  /* ===================== 디자인 기준 v1 (1차 개편) ===================== */
+  body{font-variant-numeric:tabular-nums}
+  h1{font-size:1.75rem;line-height:1.4}
+  h2{font-size:1.3125rem;line-height:1.45}
+  .view{gap:24px}
+  /* 카드: 흰 바탕 + 옅은 구분선, 둥글기 12 */
+  .card,.tile,.o-side,.o-events,.o-count,.f-sum li,.f-card,.f-empty{border-radius:var(--r-md)}
+  .card{border-color:var(--line)}
+  .map,.o-map{border-radius:var(--r-sm)}
+  .rec-dlg,.acct-menu{border-radius:var(--r-lg)}
+  .btn,.seg button,.fgroup select,.fgroup input,.utility select,.mode-btn,.acct-out,.chk-opt,.rec-dlg textarea,.rec-dlg input[type=text]{border-radius:var(--r-sm)}
+  .btn{min-height:44px}
+  .btn.sm{min-height:36px}
+  .btn,.main-menu a,.seg button,.sl-item,.f-card{transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+  /* 주 메뉴: 현재 메뉴는 짙은 파랑, 밑줄이 가운데에서 양쪽으로 */
+  .main-menu a{position:relative;border-bottom:0;padding-bottom:20px}
+  .main-menu a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--primary);transform:scaleX(0);transition:transform .2s ease-out}
+  .main-menu a:hover::after{transform:scaleX(1)}
+  .main-menu a[aria-current="page"]{color:var(--primary-strong)}
+  .main-menu a[aria-current="page"]::after{transform:scaleX(1);background:var(--primary-strong)}
+  @media (max-width:767px){ .main-menu a{padding:8px 0 8px} }
+  /* 제목 줄: 제목 + 「?」 도움말, 아래에 한 줄 출처 */
+  .ph-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .help{position:relative}
+  .help>summary{list-style:none;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--text-3);color:var(--text-2);font-size:.9375rem;font-weight:700;line-height:1}
+  .help>summary::-webkit-details-marker{display:none}
+  .help>summary:hover{border-color:var(--primary);color:var(--primary)}
+  .help[open]>summary{background:var(--primary);border-color:var(--primary);color:var(--btn-text)}
+  .help-body{position:absolute;z-index:40;top:calc(100% + 8px);left:0;width:min(30rem,calc(100vw - 32px));background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:0 6px 20px rgba(0,0,0,.12);padding:16px 18px;font-size:.9375rem;font-weight:400;color:var(--text);display:flex;flex-direction:column;gap:8px}
+  .help-body b{font-weight:700}
+  .srcs{margin-top:4px;gap:4px 16px;font-size:.875rem}
+  .srcs li{padding:0;border:0;background:none;border-radius:0}
+  /* 요약 띠: 한 상자를 구분선으로 나눔 */
+  .tiles{gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden}
+  .tile{border:0;border-left:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 24px;background:none}
+  .tile:first-child{border-left:0}
+  .tile .v{font-size:2.5rem;line-height:1.2}
+  .tile.warn.on{background:none}
+  .tile.warn.on .v{color:var(--text)}
+  .tile.crit.on{background:var(--crit-bg);border-color:var(--line)}
+  .tile.crit.on .l{color:var(--crit-text)}
+  @media (max-width:767px){ .tile{border-left:0;border-top:1px solid var(--line)} .tile:nth-child(-n+2){border-top:0} .tile:nth-child(even){border-left:1px solid var(--line)} }
+  /* 본문: 큰 지도(약 2/3) + 조치 필요 목록 */
+  .body-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:stretch}
+  .body-grid>.card{min-height:0}
+  .map.livemap{height:clamp(420px,46vw,640px)}
+  #attention .sl{overflow:auto;max-height:clamp(420px,46vw,640px)}
+  /* 조치 필요(좁은 칸): 배지 + 장치·사유 / 지속 시간 + 상세 보기 */
+  #attention .sl-item{grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px}
+  #attention .sl-item>div{grid-column:2/4}
+  #attention .sl-dur{grid-column:2;grid-row:2;text-align:left}
+  #attention .sl-item .btn{grid-column:3;grid-row:2;justify-self:end}
+  #attention .sl-item>.badge{align-self:start;margin-top:2px}
+  .map-hint{font-size:.8125rem;color:var(--text-3)}
+  /* 발표용 도구: 맨 아래, 접힘 */
+  .tools{grid-template-columns:minmax(0,1fr)}
+  .demo>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:1.125rem}
+  .demo>summary::-webkit-details-marker{display:none}
+  .demo>summary::after{content:"펼치기";font-size:.875rem;font-weight:700;color:var(--link)}
+  .demo[open]>summary::after{content:"접기"}
+  .demo .row{margin-top:16px}
+  .demo .note{margin-top:12px}
+  /* 바닥글: 국내 공공 사이트 표준형 */
+  .site-footer{padding-block:40px;background:var(--surface)}
+  .site-footer .container{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px 48px;flex-direction:initial}
+  .site-footer .f-links{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:4px 20px;font-weight:700}
+  .site-footer .f-links a{color:var(--text);text-decoration:none}
+  .site-footer .f-links a:hover{text-decoration:underline}
+  .site-footer .f-links li:first-child a{color:var(--primary-strong)}
+  .site-footer h2{font-size:.9375rem;margin:0 0 6px;color:var(--text)}
+  .site-footer .f-col{display:flex;flex-direction:column;gap:6px}
+  .site-footer .f-col p{margin:0}
+  .site-footer .f-rel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .site-footer .f-copy{grid-column:1/-1;border-top:1px solid var(--line);padding-top:16px;font-size:.875rem;color:var(--text-3)}
+  @media (max-width:767px){ .site-footer .container{grid-template-columns:minmax(0,1fr)} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
 </head>
 <body>
@@ -569,15 +653,20 @@
   <!-- ===================== 모니터링 (담당자 PC) ===================== -->
   <div class="container view" id="pcView">
     <div class="page-head">
-      <h1>관악구 빗물받이 모니터링</h1>
+      <div class="ph-row">
+        <h1>관악구 빗물받이 모니터링</h1>
+        <details class="help">
+          <summary aria-label="이 화면 도움말">?</summary>
+          <div class="help-body">
+            <p><b>GA-001(신림동)은 실제 장치</b>로, ThingSpeak에서 15초마다 최신 값을 받아옵니다. 1분 넘게 새 값이 없으면 「통신 끊김」으로 표시됩니다.<span class="ts-err" id="tsErr"></span></p>
+            <p>나머지 49대는 관악구 침수흔적·침수예상 구역에 설치를 가정한 가상 장치로, 모든 화면이 같은 값을 보는 시뮬레이션입니다.</p>
+            <p>장치를 누르면 아래에 상세가 열리고, 지도를 한 번 누르면 마우스 휠로 확대·축소할 수 있어요.</p>
+          </div>
+        </details>
+      </div>
       <p class="meta"><span class="live" aria-hidden="true"></span>담당자 화면 · 마지막 갱신 <time id="clock" class="num">--:--:--</time></p>
       <ul class="srcs" id="dataSrc" aria-label="데이터 출처와 갱신 시각"></ul>
     </div>
-
-    <p class="infobox">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--info-icon)"/><path d="M10 9v5" stroke="var(--info-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="6" r="1.2" fill="var(--info-bg)"/></svg>
-      <span><b>GA-001(신림동)은 실제 장치</b>로, ThingSpeak에서 15초마다 최신 값을 받아옵니다. 1분 넘게 새 값이 없으면 "통신 끊김"으로 표시됩니다. 나머지 49대는 관악구 전체 설치를 가정한 가상 장치입니다.<span class="ts-err" id="tsErr"></span></span>
-    </p>
 
     <ul class="tiles" aria-label="장치 상태 요약">
       <li class="tile"><span class="l">전체 장치</span><span class="v num" id="tTotal">0</span><span class="s" id="tTotalS">관악구 21개 동</span></li>
@@ -587,10 +676,6 @@
     </ul>
 
     <div class="body-grid">
-      <section class="card" aria-labelledby="hAtt" id="attention" tabindex="-1">
-        <div class="card-head"><h2 id="hAtt">조치 필요</h2><span class="sub" id="attMeta">위험 먼저, 오래된 순</span></div>
-        <ul class="sl" id="attList"></ul>
-      </section>
       <div class="right-col">
         <section class="card" aria-labelledby="hMap">
           <div class="card-head"><h2 id="hMap">위치</h2><span class="sub" id="mapSub">침수흔적·침수예상 구역 기준 배치 · GA-001만 실제 장치</span></div>
@@ -604,10 +689,15 @@
             <li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--link)" stroke-width="2"/></svg>선택한 장치</li>
             <li id="lgFlood"><span class="sw-flood" aria-hidden="true"></span>침수 예상 구역 (진할수록 깊음)</li>
           </ul>
+          <p class="map-hint" id="mapHint">지도를 한 번 누르면 마우스 휠로 확대·축소할 수 있어요.</p>
         </section>
-        <section class="card" aria-labelledby="hDetail" id="detail" tabindex="-1"></section>
       </div>
+      <section class="card" aria-labelledby="hAtt" id="attention" tabindex="-1">
+        <div class="card-head"><h2 id="hAtt">조치 필요</h2><span class="sub" id="attMeta">위험 먼저, 오래된 순</span></div>
+        <ul class="sl" id="attList"></ul>
+      </section>
     </div>
+    <section class="card" aria-labelledby="hDetail" id="detail" tabindex="-1"></section>
 
     <section class="card" aria-labelledby="hAll">
       <div class="card-head"><h2 id="hAll">전체 장치</h2><span class="sub" id="tableMeta"></span></div>
@@ -652,7 +742,8 @@
 
     <div class="tools">
       <section class="card" aria-labelledby="hDemo">
-        <div class="card-head"><h2 id="hDemo">시연 조작</h2><span class="sub">발표용</span></div>
+        <details class="demo">
+          <summary><h2 id="hDemo">발표용 도구</h2></summary>
         <div class="row">
           <button type="button" class="btn primary" id="btnPreset">발표용 상황 만들기 (즉시 · 위험 2, 주의 2)</button>
           <button type="button" class="btn" id="btnReset">전체 정상으로 되돌리기 (즉시)</button>
@@ -660,14 +751,6 @@
           <button type="button" class="btn" id="btnStorm">GA-002 주변 국지성 폭우 (약 3분)</button>
         </div>
         <p class="note" id="demoNote">발표용 상황: 나머지는 모두 정상으로 비우고, 바로 위험 2대(GA-002 수납함 가득 참, GA-005 마지노선 수위)와 주의 2대(GA-021 수납함 86%, GA-011 강우로 수위 상승)만 남겨요. 수납함 문제는 「수납함 비움」을 기록할 때까지 남고, 수위 문제는 국지성 비가 그치면 15분 안팎에 스스로 내려가요. 전체 정상: 모든 수납함·입구를 비우고 진행 중인 비를 15분 동안 멈춰요. 호우 시나리오: 3시간 동안 호우주의보 수준(3시간 약 60~75mm) 비. 국지성 폭우: GA-002 주변 수위가 약 3분에 걸쳐 마지노선까지 차올라요. 모두 모든 화면에 함께 적용돼요.</p>
-      </section>
-      <section class="card">
-        <details>
-          <summary>위험 상태일 때 담당자에게 가는 알림 (예시)</summary>
-          <div class="notify">
-            <div><b>문자</b>[빗물받이] GA-001 신림동 — 마지노선 수위 도달, 입구 자동 차단. 현장 확인 바랍니다.</div>
-            <div><b>이메일</b>제목: [경보] GA-001 위험 상태 전환<br>신림동 GA-001이 마지노선 수위에 도달해 입구가 자동 차단되었습니다.</div>
-          </div>
         </details>
       </section>
     </div>
@@ -676,14 +759,16 @@
   <!-- ===================== 이력 ===================== -->
   <div class="container view" id="histView" hidden>
     <div class="page-head">
-      <h1>이력 · 최근 30일</h1>
+      <div class="ph-row">
+        <h1>이력 · 최근 30일</h1>
+        <details class="help">
+          <summary aria-label="이력 화면 도움말">?</summary>
+          <div class="help-body"><p>가상 장치 49대의 이력은 <b>모니터링 화면과 같은 시뮬레이션</b>을 지난 30일 동안 다시 계산한 것입니다. 비는 기상청 실측 시간 강수량(없는 날은 장마철 가정), 수납함은 2주 1회 정기 청소(가정)와 실제 남긴 조치 기록을 반영하므로 어느 화면에서 열어도 같습니다. GA-001은 실측값만 남깁니다.</p></div>
+        </details>
+      </div>
       <p class="meta">기록과 분석</p>
       <ul class="srcs" id="histSrc" aria-label="이력 자료 출처"></ul>
     </div>
-    <p class="infobox">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--info-icon)"/><path d="M10 9v5" stroke="var(--info-bg)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="6" r="1.2" fill="var(--info-bg)"/></svg>
-      <span>가상 장치 49대의 이력은 <b>모니터링 화면과 같은 시뮬레이션</b>을 지난 30일 동안 다시 계산한 것입니다. 비는 기상청 실측 시간 강수량(없는 날은 장마철 가정), 수납함은 2주 1회 정기 청소(가정)와 실제 남긴 조치 기록을 반영하므로 어느 화면에서 열어도 같습니다. GA-001은 실측값만 남깁니다.</span>
-    </p>
     <ul class="tiles" id="hTiles" aria-label="30일 요약"></ul>
 
     <section class="card" aria-labelledby="hChartH">
@@ -894,11 +979,26 @@
 
 <footer class="site-footer">
   <div class="container">
-    <strong>빗물받이 모니터링</strong>
-    <p>졸업 캡스톤디자인 개념증명 데모입니다. 실제 관악구청 서비스가 아니며, GA-001을 뺀 장치 49대와 지난 기록은 가상 데이터입니다.</p>
-    <p>데이터: GA-001 실측값(ThingSpeak 채널 3570123) · 디자인 기준: 디지털 정부서비스 UI/UX 가이드라인(2025.08)</p>
-    <p>강수량 출처: 기상청 「지상(종관, ASOS) 시간자료 조회서비스」·「단기예보 조회서비스(초단기실황)」, 공공데이터포털(data.go.kr) · 이용허락범위: 저작자표시</p>
-    <p><a href="privacy.html">개인정보 처리 안내</a></p>
+    <div class="f-col">
+      <ul class="f-links">
+        <li><a href="privacy.html">개인정보 처리 안내</a></li>
+        <li><a href="#pc" id="footHelp">이용 안내</a></li>
+      </ul>
+      <p><strong>빗물받이 모니터링</strong> · 이화여자대학교 캡스톤디자인 브라키오사우르스 조</p>
+      <p>졸업 캡스톤디자인 개념증명 데모입니다. 실제 관악구청 서비스가 아니며, GA-001을 뺀 장치 49대와 지난 기록은 가상 데이터(모든 화면이 같은 값을 보는 시뮬레이션)입니다.</p>
+    </div>
+    <div class="f-col">
+      <h2>데이터 출처</h2>
+      <p>GA-001 실측값: ThingSpeak 채널 3570123</p>
+      <p>강수량: 기상청 「지상(종관, ASOS) 시간자료 조회서비스」·「단기예보 조회서비스(초단기실황)」, 공공데이터포털(data.go.kr) · 이용허락범위: 저작자표시</p>
+      <p>장치 배치: 서울시 침수흔적도·풍수해 침수예상도 · 행정동 경계: 통계청</p>
+      <h2 style="margin-top:8px">관련 사이트</h2>
+      <ul class="f-rel">
+        <li><a href="https://www.weather.go.kr/w/index.do" target="_blank" rel="noopener">기상청 날씨누리</a></li>
+        <li><a href="https://www.hrfco.go.kr" target="_blank" rel="noopener">한강홍수통제소</a></li>
+      </ul>
+    </div>
+    <p class="f-copy">디자인 기준: 디지털 정부서비스 UI/UX 가이드라인(2025.08) · 서체: Pretendard GOV(SIL 오픈 폰트 라이선스)</p>
   </div>
 </footer>
 
@@ -1616,6 +1716,13 @@
   }
 
   var SIM = createSim(SITES);
+  // 바닥글 「이용 안내」 → 모니터링 화면의 「?」 도움말을 엶
+  document.getElementById("footHelp").addEventListener("click", function(){
+    setTimeout(function(){ var h = document.querySelector("#pcView .help"); if (h){ h.open = true; h.querySelector("summary").focus(); } }, 50);
+  });
+  // 「?」 도움말: 바깥을 누르거나 Esc를 누르면 닫힘
+  document.addEventListener("click", function(e){ document.querySelectorAll("details.help[open]").forEach(function(d){ if (!d.contains(e.target)) d.open = false; }); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") document.querySelectorAll("details.help[open]").forEach(function(d){ d.open = false; d.querySelector("summary").focus(); }); });
   var TIER_NAME = ["NORMAL", "TIER1", "OVERFLOW"];
   function simK(t){ return Math.floor(t / SIM_STEP_MS); }
   // 시뮬레이션 값 → 화면용 장치 값
@@ -1859,7 +1966,7 @@
     box.innerHTML = att.map(function(u){
       return '<li class="sl-item' + (u.id === selectedId ? " sel" : "") + '">' +
         badge(u.status) +
-        '<div><p class="sl-title num">' + u.id + ' · ' + esc(u.dong) + '</p><p class="sl-desc">' + reasonOf(u) + ' · ' + (u.real ? "실증 장치" : "가상 장치") + '</p></div>' +
+        '<div><p class="sl-title num">' + u.id + ' · ' + esc(u.dong) + '</p><p class="sl-desc">' + reasonOf(u) + (u.real ? ' · 실측 장치' : '') + '</p></div>' +
         '<p class="sl-dur">' + durText(u) + '</p>' +
         '<button type="button" class="btn sm" data-id="' + u.id + '" aria-label="' + u.id + ' 상세 보기">상세 보기</button></li>';
     }).join("");
@@ -3012,6 +3119,11 @@
     var m = L.map(el, {zoomControl:!big, scrollWheelZoom:false, attributionControl:true, keyboard:true, zoomSnap:0.25});
     // 처음부터 관악구 중심으로 화면을 잡아 둠: 창이 안 보이는 상태로 열려도 지도가 빈 채로 남지 않게
     m.setView([37.468, 126.945], 12);
+    // 지도를 한 번 누르면 휠 확대·축소(페이지 스크롤과 부딪히지 않게), 지도 밖으로 나가면 다시 끔
+    if (!big){
+      m.on("click focus", function(){ m.scrollWheelZoom.enable(); });
+      m.on("mouseout blur", function(){ m.scrollWheelZoom.disable(); });
+    }
     m.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     addBaseMaps(m, elId);
     var floods = [];
