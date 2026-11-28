@@ -1434,14 +1434,14 @@
   //
   //  물리 규칙(아두이노 drain_wiper_with_water_sensor.ino와 같은 규칙)
   //  · 수위 = 하수관이 넘쳐 역류하는 높이(주변 비를 약 6분 늦게 따라감, 침수 위험 지점일수록 쉽게 참)
-  //           + 입구로 들어온 물이 하수관으로 다 못 빠져 고이는 높이(입구가 막히거나 쓰레기가 덮으면 줄어듦)
+  //           + 입구로 들어온 물이 하수관으로 다 못 빠져 고이는 높이(쓰레기가 덮으면 줄어듦)
   //  · 수위 단계: 0.3cm 이상 강우 감지(TIER1, 0.15cm 미만이면 해제)
-  //               센서B 25%(10cm) 이상 마지노선 → 남은 와이퍼로 한 번 더 치운 뒤 두 입구를 막음
-  //               센서B 0%(9cm 미만)로 내려가면 다시 엶
+  //               센서B 25%(10cm) 이상 마지노선 → 한 번 더 치우고, 이후에도 5분마다 와이핑(입구 차단 없음, 11/28)
+  //               센서B 0%(9cm 미만)로 내려가면 마지노선 해제
   //  · 쓰레기: 맑은 날에도 조금씩(담배꽁초·낙엽), 비가 오면 더 많이 입구 위에 쌓인다(장치마다 주변 환경에 따라 0.6~2.6배).
   //            와이퍼가 돌 때(강우 중 5분마다, 평소 3시간마다) 와이퍼A는 수납함1, B는 수납함2로 쓸어 넣는다.
-  //            수납함이 100%(150g)가 되면 그 와이퍼가 입구를 막고, 사람이 비우기 전까지 그대로.
-  //            막힌 쪽 입구 위에는 쓰레기가 계속 쌓여 물이 덜 들어간다.
+  //            수납함이 100%(150g)가 되면 그 와이퍼는 사람이 비우기 전까지 와이핑을 쉰다(입구를 막지는 않음).
+  //            쉬는 쪽 입구 위에는 쓰레기가 계속 쌓여 물이 덜 들어간다.
   // =====================================================================
   var SIM_STEP_MS = 4000;
   var SIM_HOUR = 3600000, SIM_DAY = 86400000;
@@ -1624,7 +1624,8 @@
       }
       return {storms:storms, resets:resets, scen:scen, pause:pauseAt(t, resets)};
     }
-    function updateBlocks(s){ s.blkA = s.over || s.f1; s.blkB = s.over || s.f2; }
+    // 입구 차단 없음(11/28, 아두이노와 같게): blkA·blkB = 수납함이 가득 차 그쪽 와이퍼가 와이핑을 쉬는 중
+    function updateBlocks(s){ s.blkA = s.f1; s.blkB = s.f2; }
     function checkFull(s){
       if (s.b1 >= 99.95){ s.b1 = 100; s.f1 = true; }
       if (s.b2 >= 99.95){ s.b2 = 100; s.f2 = true; }
@@ -1642,7 +1643,7 @@
       var R = rainAt(i, t, cells, mods); s.R = R;
       s.Rl += (R - s.Rl) / 90;                                            // 약 6분 늦게 따라가는 하수관 쪽 비
       var Ss = 13 * clampS((s.Rl * p.vul - 15) / 35, 0, 1.15);            // 하수관 역류 높이
-      var G = s.GA + s.GB, open = ((s.blkA ? 0 : 1) + (s.blkB ? 0 : 1)) / 2 * (1 - G / (G + 250));
+      var G = s.GA + s.GB, open = 1 - G / (G + 250);                     // 입구는 막지 않음, 쌓인 쓰레기만 막음
       var q = R * p.vul * open / p.qcap;
       var Hl = 4 * clampS((q - 0.6) / 0.6, 0, 1.5);                        // 입구로 들어와 고이는 높이
       var Lt = Ss + Hl * (1 - Ss / 13); if (Lt > 13) Lt = 13;
@@ -1676,7 +1677,7 @@
         else if (i === PRESET.boxWarn){ s.b1 = 86; s.b2 = 84; s.f1 = false; s.f2 = false; updateBlocks(s); }
         else if (i === PRESET.waterCrit){
           s.L = 10.5; s.Rl = 70;
-          if (!s.over){ wipe(s); s.over = true; updateBlocks(s); }      // 아두이노처럼 마지막 와이핑 후 입구 차단
+          if (!s.over){ wipe(s); s.over = true; updateBlocks(s); }      // 아두이노처럼 마지노선에서 한 번 더 와이핑
           s.tier = 2; s.t1K = k - 45; s.rise = 180;
         } else if (i === PRESET.waterWarn){
           s.L = 2.5; s.Rl = 20;
@@ -1694,14 +1695,14 @@
     }
     // 상태가 바뀐 까닭(이력에 남김)
     function stWhy(tier, s, prev){
-      if (tier === 2) return "마지노선 수위 · 입구 차단";
+      if (tier === 2) return "마지노선 수위 · 넘침 위험";
       if (s.f1 || s.f2) return (s.f1 && s.f2 ? "수납함 1·2" : (s.f1 ? "수납함1" : "수납함2")) + " 가득 참";
       if (tier === 1) return "강우 감지 · 수위 상승";
       if (s.b1 >= 80 || s.b2 >= 80) return "수납함" + (s.b1 >= s.b2 ? 1 : 2) + " " + Math.round(Math.max(s.b1, s.b2)) + "%";
       return prev === "crit" || prev === "warn" ? "비 그침 · 정상 복귀" : "정상 복귀";
     }
     function judge(i, s){
-      if (s.tier === 2) return {result:"fail", st:"crit", why:"마지노선 수위 · 입구 차단"};
+      if (s.tier === 2) return {result:"fail", st:"crit", why:"마지노선 수위 · 넘침 위험"};
       if (s.f1 || s.f2) return {result:"fail", st:"crit", why:(s.f1 && s.f2 ? "수납함 1·2" : (s.f1 ? "수납함1" : "수납함2")) + " 가득 참"};
       if (s.b1 >= 80 || s.b2 >= 80) return {result:"fail", st:"warn", why:"수납함 " + Math.round(Math.max(s.b1, s.b2)) + "%"};
       return {result:"ok", st:baseSt(s), why:s.tier === 1 ? "비로 수위 상승 중(조치와 무관)" : ""};
@@ -2016,7 +2017,7 @@
   }
   function sensorReason(u){
     if (u.real && u.offline) return u.everData ? "1분 넘게 새 값 없음" : "실측값 대기 중";
-    if (u.tier === "OVERFLOW") return "마지노선 수위 · 입구 차단";
+    if (u.tier === "OVERFLOW") return "마지노선 수위 · 넘침 위험";
     if (u.full1 && u.full2) return "수납함 1·2 가득 참";
     if (u.full1) return "수납함1 가득 참";
     if (u.full2) return "수납함2 가득 참";
@@ -2062,7 +2063,8 @@
     }
     return "가상 장치(시뮬레이션 · 모든 화면 같은 값)";
   }
-  function blockedText(b){ return ["없음", "와이퍼A", "와이퍼B", "와이퍼A·B"][b] || "-"; }
+  // 와이퍼 상태: 수납함이 가득 차면 그쪽 와이퍼만 와이핑을 쉼(입구 차단 기능은 11/28에 뺌)
+  function wiperText(u){ return u.full1 && u.full2 ? "와이퍼A·B 쉼(수납함 1·2 가득 참)" : u.full1 ? "와이퍼A 쉼(수납함1 가득 참)" : u.full2 ? "와이퍼B 쉼(수납함2 가득 참)" : "정상 작동"; }
 
   // ---------- 화면 상태 ----------
   var selectedId = null;
@@ -2256,7 +2258,7 @@
     else if (maxRainUnit().rain >= 30 && r < 10) parts.push("국지성 호우 · " + maxRainUnit().dong + " 주변 시간당 " + Math.round(maxRainUnit().rain) + "mm" + rainTag());
     else if (r >= 20) parts.push("강한 비 · 관악구 평균 시간당 " + Math.round(r) + "mm" + rainTag());
     else if (r >= 3) parts.push("비 · 관악구 평균 시간당 " + Math.round(r) + "mm" + rainTag());
-    if (counts.crit) parts.push("위험 장치 " + counts.crit + "대, 입구 차단 중");
+    if (counts.crit) parts.push("위험 장치 " + counts.crit + "대, 현장 출동 필요");
     var show = parts.length > 0, cr = document.getElementById("critical");
     if (show) document.getElementById("caText").textContent = parts.join(" · ");
     if (cr.hidden === show){ cr.hidden = !show; if (typeof measureSticky === "function") measureSticky(); }
@@ -2320,7 +2322,7 @@
       var cls = full || v >= 100 ? "crit" : (v >= 80 ? "warn" : "box");
       return '<div class="meter"><div class="meter-label">수납함' + n + ' 적재율<b>' + Math.round(v) + '%</b></div>' +
         '<div class="track"><div class="fill ' + cls + '" style="width:' + clamp(v,0,100) + '%"></div></div>' +
-        (full ? '<span class="full-flag">가득 참 · 입구 차단</span>' : '') + '</div>';
+        (full ? '<span class="full-flag">가득 참 · 수거 필요</span>' : '') + '</div>';
     }
     var cleanLog = [];
     if (!u.real){ var lc = SIM.lastClean(u.idx, Date.now()); if (Date.now() - lc < 86400000) cleanLog.push({ts:lc, time:fmtTime(new Date(lc)), text:"정기 청소 · 수납함·입구 비움 (청소업체, 2주 1회 가정)"}); }
@@ -2341,8 +2343,8 @@
           (u.riseSeconds != null && u.tier !== "NORMAL" ? ' · A→B 상승 ' + u.riseSeconds + '초' : '') +
           (u.overflowBySensorA ? ' · 센서 B 설치 전이라 센서 A 맨 위를 마지노선으로 판단' : '') + '</span></div>' +
       '<div class="boxes">' + boxMeter(1, u.fill1, u.full1) + boxMeter(2, u.fill2, u.full2) + '</div>' +
-      (u.real && u.everData ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + '</p>' : '') +
-      (!u.real ? '<p class="note">입구 차단: ' + blockedText(u.blocked) + ' · 주변 비 시간당 ' + Math.round(u.rain) + 'mm' + (SIM.realRain() ? '(출처: 기상청 실측 기반)' : '(장마철 가정)') + (u.tier !== "NORMAL" ? ' · 와이퍼 5분마다 작동' : ' · 와이퍼 3시간마다 작동') +
+      (u.real && u.everData ? '<p class="note">와이퍼: ' + wiperText(u) + '</p>' : '') +
+      (!u.real ? '<p class="note">와이퍼: ' + wiperText(u) + ' · 주변 비 시간당 ' + Math.round(u.rain) + 'mm' + (SIM.realRain() ? '(출처: 기상청 실측 기반)' : '(장마철 가정)') + (u.tier !== "NORMAL" ? ' · 5분마다 와이핑' : ' · 3시간마다 와이핑') +
         '<br>정기 청소: 마지막 ' + mdhm(SIM.lastClean(u.idx, Date.now())) + ' · 다음 ' + mdhm(SIM.nextClean(u.idx, Date.now())) + ' (2주 1회 새벽, 가정)</p>' : '') +
       '<div class="actions">' +
         (u.dispatch ? '<p class="dsp-line">' + dispatchText(u.dispatch) + '</p>'
